@@ -56,8 +56,14 @@ export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProp
         })
         .then(({ data, error: invokeErr }) => {
           if (invokeErr) {
-            console.warn('[TripZone] Telegram:', invokeErr.message, invokeErr)
-          } else if (import.meta.env.DEV) {
+            console.warn('[TripZone] Telegram échec:', invokeErr.message, invokeErr)
+            return
+          }
+          if (data && typeof data === 'object' && 'ok' in data && data.ok === false) {
+            console.warn('[TripZone] Telegram refusé:', data)
+            return
+          }
+          if (import.meta.env.DEV) {
             console.info('[TripZone] Telegram OK', data)
           }
         })

@@ -148,13 +148,17 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Missing record in payload" }, 400);
   }
 
-  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
-  const chatId = Deno.env.get("TELEGRAM_CHAT_ID");
+  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN")?.trim().replace(/^["']|["']$/g, "");
+  const chatIdRaw = Deno.env.get("TELEGRAM_CHAT_ID")?.trim().replace(/^["']|["']$/g, "");
 
-  if (!botToken || !chatId) {
+  if (!botToken || !chatIdRaw) {
     console.error("Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID");
     return jsonResponse({ error: "Server misconfigured" }, 500);
   }
+
+  /** Telegram accepte id numérique ou chaîne ; évite les guillemets collés par erreur dans les secrets. */
+  const chatId: string | number =
+    /^-?\d+$/.test(chatIdRaw) ? Number(chatIdRaw) : chatIdRaw;
 
   let tripTitle = tripTitlePreset ?? "Trajet inconnu";
 
@@ -197,17 +201,31 @@ Deno.serve(async (req: Request) => {
     }),
   });
 
-  const tgBody = await tgRes.json().catch(() => ({}));
+  const tgBody = (await tgRes.json().catch(() => ({}))) as {
+    ok?: boolean;
+    result?: { message_id?: number };
+    description?: string;
+    error_code?: number;
+  };
 
-  if (!tgRes.ok) {
-    console.error("Telegram API error:", tgRes.status, tgBody);
+  /** L’API Telegram renvoie souvent HTTP 200 avec { ok: false, description: "..." } */
+  if (!tgRes.ok || tgBody.ok === false) {
+    console.error("Telegram sendMessage failed:", tgRes.status, tgBody);
     return jsonResponse(
-      { ok: false, telegram: tgBody },
+      {
+        ok: false,
+        telegram: tgBody,
+        hint:
+          "Vérifie TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (sans espaces), et que tu as écrit au bot au moins une fois.",
+      },
       502,
     );
   }
 
-  return jsonResponse({ ok: true, telegram_message_id: tgBody?.result?.message_id }, 200);
+  return jsonResponse(
+    { ok: true, telegram_message_id: tgBody.result?.message_id },
+    200,
+  );
 });
 
 function escapeHtml(s: string): string {
