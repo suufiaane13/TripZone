@@ -6,7 +6,6 @@ import {
   Trash2,
   Loader2,
   Image as ImageIcon,
-  Upload,
   Check,
 } from 'lucide-react'
 import { AdminLayout } from '../components/AdminLayout'
