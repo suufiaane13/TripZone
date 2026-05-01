@@ -13,7 +13,9 @@
  *   TELEGRAM_CHAT_ID     — ton id ou celui du groupe (getUpdates ou @userinfobot)
  *   SERVICE_ROLE_KEY — même valeur que la clé « service_role » (Dashboard → API).
  *     (Impossible d’utiliser le nom SUPABASE_SERVICE_ROLE_KEY en secret personnalisé.)
- *   NOTIFY_WEBHOOK_SECRET — si défini, la requête doit inclure X-Notify-Secret: <valeur>
+ *   NOTIFY_WEBHOOK_SECRET — si défini, la requête doit inclure X-Notify-Secret: <valeur>,
+ *     sauf pour le corps JSON { "reservation_id": "<uuid>" } (appel navigateur après réservation :
+ *     la ligne est rechargée en base avec la service role).
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.8";
@@ -34,10 +36,18 @@ type DbWebhookPayload = {
   };
 };
 
+const corsHeaders: Record<string, string> = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-notify-secret",
+};
+
 function jsonResponse(body: Record<string, unknown>, status: number) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: corsHeaders,
   });
 }
 
@@ -56,12 +66,68 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
+  let payload: DbWebhookPayload & { reservation_id?: string };
+  try {
+    payload = await req.json();
+  } catch {
+    return jsonResponse({ error: "Invalid JSON" }, 400);
+  }
+
+  const clientNotifyById =
+    typeof payload.reservation_id === "string" &&
+    payload.reservation_id.length > 0 &&
+    !payload.record;
+
   const secret = Deno.env.get("NOTIFY_WEBHOOK_SECRET");
   if (secret) {
     const sent = req.headers.get("x-notify-secret");
-    if (sent !== secret) {
+    if (sent !== secret && !clientNotifyById) {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey =
+    Deno.env.get("SERVICE_ROLE_KEY") ??
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  let row = payload.record;
+
+  if (clientNotifyById) {
+    if (!supabaseUrl || !serviceKey) {
+      console.error("SERVICE_ROLE_KEY needed for reservation_id notify path");
+      return jsonResponse({ error: "Server misconfigured" }, 500);
+    }
+    const supabase = createClient(supabaseUrl, serviceKey);
+    const { data: resRow, error: resErr } = await supabase
+      .from("reservations")
+      .select("id, trip_id, full_name, phone, persons, status, created_at")
+      .eq("id", payload.reservation_id!)
+      .maybeSingle();
+
+    if (resErr || !resRow) {
+      return jsonResponse({ error: "Reservation not found" }, 404);
+    }
+
+    const created = new Date(resRow.created_at as string).getTime();
+    const maxAgeMs = 15 * 60 * 1000;
+    if (Number.isNaN(created) || Date.now() - created > maxAgeMs) {
+      return jsonResponse({ error: "Reservation too old or invalid" }, 400);
+    }
+
+    row = {
+      id: resRow.id as string,
+      trip_id: resRow.trip_id as string,
+      full_name: resRow.full_name as string,
+      phone: resRow.phone as string,
+      persons: resRow.persons as number,
+      status: resRow.status as string,
+      created_at: resRow.created_at as string,
+    };
+  }
+
+  if (!row?.trip_id || !row.full_name) {
+    return jsonResponse({ error: "Missing record in payload" }, 400);
   }
 
   const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
@@ -72,22 +138,6 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Server misconfigured" }, 500);
   }
 
-  let payload: DbWebhookPayload;
-  try {
-    payload = await req.json();
-  } catch {
-    return jsonResponse({ error: "Invalid JSON" }, 400);
-  }
-
-  const row = payload.record;
-  if (!row?.trip_id || !row.full_name) {
-    return jsonResponse({ error: "Missing record in payload" }, 400);
-  }
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceKey =
-    Deno.env.get("SERVICE_ROLE_KEY") ??
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   let tripTitle = "Trajet inconnu";
 
   if (supabaseUrl && serviceKey) {

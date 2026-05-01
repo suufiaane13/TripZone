@@ -25,7 +25,7 @@ export const BookingModal = ({ isOpen, onClose, trip }: BookingModalProps) => {
     
     setLoading(true)
     try {
-      const { error } = await supabase.rpc('create_public_reservation', {
+      const { data: newId, error } = await supabase.rpc('create_public_reservation', {
         p_trip_id: trip.id,
         p_full_name: formData.full_name,
         p_phone: formData.phone,
@@ -33,6 +33,13 @@ export const BookingModal = ({ isOpen, onClose, trip }: BookingModalProps) => {
       })
 
       if (error) throw error
+      if (newId) {
+        void supabase.functions
+          .invoke('notify-telegram', { body: { reservation_id: newId } })
+          .then(({ error: invokeErr }) => {
+            if (invokeErr) console.warn('[TripZone] Telegram:', invokeErr.message)
+          })
+      }
       setSuccess(true)
       setTimeout(() => {
         setSuccess(false)
