@@ -1,11 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, User, Phone, Users, CheckCircle2, AlertCircle, Loader2, Send, Download } from 'lucide-react'
-import { useState, useRef } from 'react'
+import { X, User, Phone, Users, CheckCircle2, AlertCircle, Loader2, Send } from 'lucide-react'
+import { useState } from 'react'
 import type { Trip } from '../types'
 import { supabase } from '../lib/supabase'
-import { QRCodeSVG } from 'qrcode.react'
-import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
 import { getWhatsAppLink, useSiteSettings } from '../lib/siteSettings'
 
 interface ReservationModalProps {
@@ -19,8 +16,6 @@ export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProp
   const [status, setStatus] = useState<'form' | 'submitting' | 'success' | 'error'>('form')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [resId, setResId] = useState<string | null>(null)
-  const [isDownloading, setIsDownloading] = useState(false)
-  const ticketRef = useRef<HTMLDivElement>(null)
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -45,7 +40,6 @@ export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProp
       setResId(newId as string)
       setStatus('success')
 
-      // Telegram : envoi direct (record + titre) — fonctionne même sans SERVICE_ROLE_KEY sur Edge.
       void supabase.functions
         .invoke('notify-telegram', {
           body: {
@@ -84,75 +78,6 @@ export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProp
     window.open(getWhatsAppLink(settings.whatsapp_number, text), '_blank')
   }
 
-  /** html2canvas ne parse pas oklch() (Tailwind v4) — on force du hex sur le clone. */
-  const injectPdfSafeColors = (doc: Document) => {
-    const style = doc.createElement('style')
-    style.setAttribute('data-pdf-override', '1')
-    style.textContent = `
-      [data-ticket-pdf] {
-        background-color: #ffffff !important;
-        color: #111827 !important;
-        border-color: #e5e7eb !important;
-      }
-      [data-ticket-pdf] * {
-        box-shadow: none !important;
-        background-image: none !important;
-      }
-      [data-ticket-pdf] [data-pdf-accent] {
-        color: #1B4332 !important;
-      }
-      [data-ticket-pdf] [data-pdf-muted] {
-        color: #9ca3af !important;
-      }
-      [data-ticket-pdf] [data-pdf-bar] {
-        background-color: rgba(27, 67, 50, 0.2) !important;
-      }
-      [data-ticket-pdf] [data-pdf-qr-wrap] {
-        background-color: #ffffff !important;
-        border-color: #f3f4f6 !important;
-      }
-      [data-ticket-pdf] h3,
-      [data-ticket-pdf] p:not([data-pdf-accent]):not([data-pdf-muted]) {
-        color: #111827 !important;
-      }
-    `
-    doc.head.appendChild(style)
-  }
-
-  const downloadTicket = async () => {
-    if (!ticketRef.current || isDownloading) return
-    
-    setIsDownloading(true)
-    try {
-      const canvas = await html2canvas(ticketRef.current, {
-        scale: 3, // Plus haute résolution
-        backgroundColor: '#ffffff',
-        useCORS: true,
-        allowTaint: true,
-        scrollX: 0,
-        scrollY: -window.scrollY,
-        onclone: (clonedDoc) => {
-          injectPdfSafeColors(clonedDoc)
-        },
-      })
-      
-      const imgData = canvas.toDataURL('image/jpeg', 1.0)
-      const pdf = new jsPDF({
-        orientation: 'p',
-        unit: 'px',
-        format: [canvas.width, canvas.height]
-      })
-      
-      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height)
-      pdf.save(`Ticket_TripZone_${formData.fullName.split(' ')[0]}.pdf`)
-    } catch (err) {
-      console.error('Erreur PDF:', err)
-      alert("Erreur lors de la génération du PDF. Vous pouvez faire une capture d'écran.")
-    } finally {
-      setIsDownloading(false)
-    }
-  }
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -180,58 +105,21 @@ export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProp
                     <CheckCircle2 className="w-10 h-10 text-green-600" />
                   </div>
                   <h2 className="text-3xl font-black text-gray-900 mb-2">C'est réservé !</h2>
-                  <p className="text-gray-500 mb-6 font-medium">Votre ticket numérique est prêt.</p>
-                  
-                  {/* Digital Ticket */}
-                  <div
-                    ref={ticketRef}
-                    data-ticket-pdf
-                    className="bg-white rounded-[32px] p-6 sm:p-8 mb-6 border-2 border-dashed border-gray-200 relative overflow-hidden"
-                  >
-                    <div data-pdf-bar className="absolute top-0 left-0 w-full h-2 bg-primary/20" />
-                    <div className="flex flex-col items-center">
-                      <div
-                        data-pdf-qr-wrap
-                        className="bg-white p-4 rounded-3xl shadow-sm mb-4 border border-gray-100"
-                      >
-                        <QRCodeSVG 
-                          value={`tripzone-res-${resId}`}
-                          size={120}
-                          level="H"
-                        />
-                      </div>
-                      <h3 className="text-xl font-black text-gray-900 mb-1">{trip.title}</h3>
-                      <p data-pdf-accent className="text-sm font-bold text-primary mb-4 uppercase tracking-widest">{formData.fullName}</p>
-                      
-                      <div className="grid grid-cols-2 gap-8 w-full pt-4 border-t border-gray-100">
-                        <div>
-                          <p data-pdf-muted className="text-[10px] font-black text-gray-400 uppercase">Passagers</p>
-                          <p className="font-bold text-gray-900">{formData.persons}</p>
-                        </div>
-                        <div>
-                          <p data-pdf-muted className="text-[10px] font-black text-gray-400 uppercase">Date</p>
-                          <p className="font-bold text-gray-900">{new Date(trip.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</p>
-                        </div>
-                      </div>
-                    </div>
+                  <p className="text-gray-500 mb-6 font-medium">
+                    Votre demande a bien été enregistrée. Notre équipe vous contactera pour confirmer.
+                  </p>
+
+                  <div className="rounded-2xl bg-gray-50 border border-gray-100 px-5 py-4 mb-8 text-left text-sm">
+                    <p className="font-black text-gray-900 mb-2">{trip.title}</p>
+                    <p className="text-gray-600"><span className="font-bold text-gray-900">{formData.fullName}</span> · {formData.persons} pers.</p>
+                    <p className="text-gray-500 mt-1">
+                      {new Date(trip.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </p>
                   </div>
                   
-                  <div className="space-y-3">
-                    <button onClick={openWhatsApp} className="w-full bg-[#25D366] text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3 shadow-lg shadow-green-500/20 hover:scale-[1.02] transition-all">
-                      <Send className="w-5 h-5" /> Confirmer sur WhatsApp
-                    </button>
-                    <button 
-                      onClick={downloadTicket} 
-                      disabled={isDownloading}
-                      className="w-full bg-gray-900 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:scale-100"
-                    >
-                      {isDownloading ? (
-                        <><Loader2 className="w-5 h-5 animate-spin" /> Génération...</>
-                      ) : (
-                        <><Download className="w-5 h-5" /> Télécharger mon ticket</>
-                      )}
-                    </button>
-                  </div>
+                  <button onClick={openWhatsApp} className="w-full bg-[#25D366] text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3 shadow-lg shadow-green-500/20 hover:scale-[1.02] transition-all">
+                    <Send className="w-5 h-5" /> Confirmer sur WhatsApp
+                  </button>
                 </div>
               ) : (
               <div className="p-8 sm:p-12">
