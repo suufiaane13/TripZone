@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { 
-  CheckCircle, XCircle, Loader2, Phone, Calendar, Filter
+  CheckCircle, XCircle, Loader2, Phone, Calendar, Filter, ChevronRight, X
 } from 'lucide-react'
 import { AdminLayout } from '../components/AdminLayout'
 
@@ -10,8 +10,9 @@ type Status = 'all' | 'pending' | 'confirmed' | 'cancelled'
 export const AdminReservations = () => {
   const [reservations, setReservations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<Status>('all')
+  const [filter, setFilter] = useState<Status>('pending')
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedReservation, setSelectedReservation] = useState<any | null>(null)
 
   useEffect(() => {
     fetchReservations()
@@ -89,25 +90,32 @@ export const AdminReservations = () => {
     return matchesFilter && matchesSearch;
   })
 
+  const counters = {
+    all: reservations.length,
+    pending: reservations.filter(r => r.status === 'pending').length,
+    confirmed: reservations.filter(r => r.status === 'confirmed').length,
+    cancelled: reservations.filter(r => r.status === 'cancelled').length,
+  }
+
   return (
     <AdminLayout>
       <div className="p-4 lg:p-12">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 mb-16">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 lg:gap-8 mb-8 lg:mb-16">
           <div>
             <span className="text-primary font-black uppercase tracking-[0.3em] text-[10px] mb-4 block">Flux Client</span>
-            <h1 className="text-5xl lg:text-6xl font-black text-gray-900 tracking-tighter leading-none">Réservations</h1>
-            <p className="text-gray-400 font-medium mt-4">Gérez les demandes et la satisfaction de vos voyageurs.</p>
+            <h1 className="text-4xl lg:text-6xl font-black text-gray-900 tracking-tighter leading-none">Réservations</h1>
+            <p className="text-gray-400 font-medium mt-3 lg:mt-4">Vue mobile simplifiée pour traiter vite les demandes.</p>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+          <div className="flex flex-col gap-3 w-full lg:w-auto">
             {/* Search Bar */}
-            <div className="relative flex-1 sm:min-w-[300px]">
+            <div className="relative w-full lg:min-w-[360px]">
               <input 
                 type="text"
                 placeholder="Rechercher un passager ou téléphone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white border border-gray-100 px-6 py-3.5 rounded-[24px] text-sm font-bold shadow-sm focus:outline-none focus:border-primary/30 transition-all pl-12"
+                className="w-full bg-white border border-gray-100 px-6 py-3.5 rounded-[20px] text-sm font-bold shadow-sm focus:outline-none focus:border-primary/30 transition-all pl-12"
               />
               <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -115,7 +123,7 @@ export const AdminReservations = () => {
             </div>
 
             {/* Status Tabs */}
-            <div className="flex bg-white p-1.5 rounded-[24px] border border-gray-100 shadow-sm overflow-x-auto max-w-full">
+            <div className="grid grid-cols-2 sm:grid-cols-4 bg-white p-1.5 rounded-[20px] border border-gray-100 shadow-sm gap-1.5 w-full">
               {[
                 { id: 'all', label: 'Toutes' },
                 { id: 'pending', label: 'Attente' },
@@ -125,13 +133,13 @@ export const AdminReservations = () => {
                 <button
                   key={tab.id}
                   onClick={() => setFilter(tab.id as Status)}
-                  className={`px-6 py-3.5 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                  className={`px-3 py-3 rounded-[14px] text-[10px] font-black uppercase tracking-widest transition-all text-center ${
                     filter === tab.id 
                     ? 'bg-primary text-white shadow-xl shadow-primary/20' 
                     : 'text-gray-400 hover:text-gray-900'
                   }`}
                 >
-                  {tab.label}
+                  {tab.label} ({counters[tab.id as Status]})
                 </button>
               ))}
             </div>
@@ -141,7 +149,43 @@ export const AdminReservations = () => {
         {loading ? (
           <div className="flex justify-center p-20"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6">
+          <>
+          {/* Mobile: compact list */}
+          <div className="md:hidden space-y-3">
+            {filteredReservations.map((res) => (
+              <div key={res.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-base font-black text-gray-900 truncate">{res.full_name}</h3>
+                    <p className="text-xs text-gray-500 font-semibold truncate mt-0.5">{res.trips?.title}</p>
+                  </div>
+                  <div className={`px-2 py-1 rounded-lg border text-[9px] font-black uppercase shrink-0 ${getStatusStyle(res.status)}`}>
+                    {translateStatus(res.status)}
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between text-xs font-bold text-gray-500">
+                  <span>{res.persons} pers</span>
+                  <span>{new Date(res.created_at).toLocaleDateString('fr-FR')}</span>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                  <a href={`tel:${res.phone}`} className="flex items-center gap-1 text-primary font-black text-sm">
+                    <Phone className="w-4 h-4" /> Appeler
+                  </a>
+                  <button
+                    onClick={() => setSelectedReservation(res)}
+                    className="flex items-center gap-1 text-gray-700 font-black text-xs uppercase tracking-wider"
+                  >
+                    Gérer <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: rich cards */}
+          <div className="hidden md:grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6">
             {filteredReservations.map(res => (
               <div key={res.id} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col group">
                 {/* Status Indicator Bar */}
@@ -199,6 +243,7 @@ export const AdminReservations = () => {
               </div>
             ))}
           </div>
+          </>
         )}
 
         {filteredReservations.length === 0 && !loading && (
@@ -208,6 +253,52 @@ export const AdminReservations = () => {
           </div>
         )}
       </div>
+
+      {/* Mobile action sheet */}
+      {selectedReservation && (
+        <div className="md:hidden fixed inset-0 z-[120]">
+          <button
+            onClick={() => setSelectedReservation(null)}
+            className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
+            aria-label="Fermer"
+          />
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[28px] p-5 border-t border-gray-100 shadow-2xl">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="min-w-0">
+                <h3 className="font-black text-gray-900 truncate">{selectedReservation.full_name}</h3>
+                <p className="text-xs text-gray-500 font-semibold truncate">{selectedReservation.trips?.title}</p>
+              </div>
+              <button
+                onClick={() => setSelectedReservation(null)}
+                className="w-9 h-9 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  updateReservationStatus(selectedReservation.id, 'confirmed')
+                  setSelectedReservation(null)
+                }}
+                className="py-3 rounded-xl bg-green-50 text-green-600 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5"
+              >
+                <CheckCircle className="w-4 h-4" /> Confirmer
+              </button>
+              <button
+                onClick={() => {
+                  updateReservationStatus(selectedReservation.id, 'cancelled')
+                  setSelectedReservation(null)
+                }}
+                className="py-3 rounded-xl bg-red-50 text-red-600 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5"
+              >
+                <XCircle className="w-4 h-4" /> Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   )
 }

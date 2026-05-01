@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { QRCodeSVG } from 'qrcode.react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
+import { getWhatsAppLink, useSiteSettings } from '../lib/siteSettings'
 
 interface ReservationModalProps {
   isOpen: boolean
@@ -14,6 +15,7 @@ interface ReservationModalProps {
 }
 
 export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProps) => {
+  const { settings } = useSiteSettings()
   const [status, setStatus] = useState<'form' | 'submitting' | 'success' | 'error'>('form')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [resId, setResId] = useState<string | null>(null)
@@ -52,16 +54,14 @@ export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProp
   }
 
   const openWhatsApp = () => {
-    const adminPhone = '212701730174'
-    const text = encodeURIComponent(
+    const text =
       `Bonjour TripZone ! Je viens de réserver ma place pour :\n\n` +
       `📦 *Trajet :* ${trip.title}\n` +
       `👤 *Nom :* ${formData.fullName}\n` +
       `👥 *Nombre de personnes :* ${formData.persons}\n` +
       `🆔 *ID Réservation :* ${resId?.slice(0, 8)}\n\n` +
       `Merci de me confirmer la réservation.`
-    )
-    window.open(`https://wa.me/${adminPhone}?text=${text}`, '_blank')
+    window.open(getWhatsAppLink(settings.whatsapp_number, text), '_blank')
   }
 
   const downloadTicket = async () => {

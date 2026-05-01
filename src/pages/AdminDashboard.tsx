@@ -31,7 +31,7 @@ export const AdminDashboard = () => {
       <div className="p-4 lg:p-12">
         <div className="mb-10 lg:mb-16">
           <span className="text-primary font-black uppercase tracking-[0.3em] text-[10px] mb-4 block">Administration</span>
-          <h1 className="text-5xl lg:text-6xl font-black text-gray-900 tracking-tighter leading-none">Tableau de bord</h1>
+          <h1 className="text-5xl lg:text-6xl font-black text-gray-900 tracking-tighter leading-none">Accueil</h1>
           <p className="text-gray-400 font-medium mt-4">Aperçu global de votre activité TripZone.</p>
         </div>
 

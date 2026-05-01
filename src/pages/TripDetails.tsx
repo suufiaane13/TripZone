@@ -4,10 +4,12 @@ import { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { ReservationModal } from '../components/ReservationModal'
 import { useTrips } from '../hooks/useTrips'
+import { getWhatsAppLink, useSiteSettings } from '../lib/siteSettings'
 
 export const TripDetails = () => {
   const { id } = useParams()
   const { trips, loading, error } = useTrips()
+  const { settings } = useSiteSettings()
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const trip = trips.find(t => t.id === id)
@@ -176,7 +178,14 @@ export const TripDetails = () => {
               <div className="mt-6 p-6 bg-primary rounded-[32px] text-white">
                 <h4 className="font-bold mb-2">Besoin d'aide ?</h4>
                 <p className="text-sm text-white/80 mb-4">Contactez-nous directement sur WhatsApp pour toute question.</p>
-                <a href="#" className="inline-block bg-white text-primary px-6 py-2 rounded-xl text-sm font-black">Discuter</a>
+                <a
+                  href={getWhatsAppLink(settings.whatsapp_number, 'Bonjour TripZone, j’ai une question sur ce trajet.')}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-white text-primary px-6 py-2 rounded-xl text-sm font-black"
+                >
+                  Discuter
+                </a>
               </div>
             </div>
           </div>

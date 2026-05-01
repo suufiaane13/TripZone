@@ -112,7 +112,7 @@ export const AdminLogin = () => {
               className="w-full bg-primary text-white py-5 rounded-[24px] text-lg font-black shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
             >
               {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : (
-                <>Accéder au Dashboard <ChevronRight className="w-5 h-5" /></>
+                <>Accéder à l&apos;Accueil <ChevronRight className="w-5 h-5" /></>
               )}
             </button>
           </form>

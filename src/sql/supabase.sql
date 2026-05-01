@@ -105,3 +105,32 @@ CREATE TRIGGER on_reservation_change
 AFTER INSERT OR UPDATE OR DELETE ON reservations
 FOR EACH ROW
 EXECUTE FUNCTION update_trip_places_smart();
+
+-- 7. Paramètres globaux du site (contacts publics dynamiques)
+CREATE TABLE IF NOT EXISTS site_settings (
+    id INTEGER PRIMARY KEY DEFAULT 1,
+    instagram_url TEXT NOT NULL DEFAULT 'https://instagram.com/tripzone_oujda',
+    whatsapp_number TEXT NOT NULL DEFAULT '212701730174',
+    contact_email TEXT NOT NULL DEFAULT 'contact@tripzone.ma',
+    contact_phone TEXT NOT NULL DEFAULT '+212 7 01 73 01 74',
+    contact_city TEXT NOT NULL DEFAULT 'Oujda, Maroc',
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT site_settings_singleton CHECK (id = 1)
+);
+
+ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read site settings" ON site_settings;
+CREATE POLICY "Allow public read site settings"
+ON site_settings FOR SELECT
+USING (true);
+
+DROP POLICY IF EXISTS "Allow admin manage site settings" ON site_settings;
+CREATE POLICY "Allow admin manage site settings"
+ON site_settings FOR ALL
+USING (auth.role() = 'authenticated')
+WITH CHECK (auth.role() = 'authenticated');
+
+INSERT INTO site_settings (id)
+VALUES (1)
+ON CONFLICT (id) DO NOTHING;

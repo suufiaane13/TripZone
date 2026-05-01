@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
+import { getWhatsAppLink, useSiteSettings } from '../lib/siteSettings'
 
 export const FloatingWhatsApp = () => {
   const [showNotification, setShowNotification] = useState(false)
-  const phoneNumber = "212701730174"
+  const { settings } = useSiteSettings()
   const message = "Bonjour TripZone, je souhaite avoir plus d'informations sur vos trajets."
 
   useEffect(() => {
@@ -44,7 +45,7 @@ export const FloatingWhatsApp = () => {
 
       {/* Floating Button with WhatsApp SVG */}
       <motion.a
-        href={`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`}
+        href={getWhatsAppLink(settings.whatsapp_number, message)}
         target="_blank"
         rel="noopener noreferrer"
         initial={{ scale: 0 }}
