@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { 
-  CheckCircle, XCircle, Loader2, Phone, Calendar, Filter, ChevronRight, X
+  CheckCircle, XCircle, Loader2, Phone, Calendar, Filter, ChevronRight, X, Trash2
 } from 'lucide-react'
 import { AdminLayout } from '../components/AdminLayout'
+import { PaginationControls } from '../components/PaginationControls'
+import { ConfirmModal } from '../components/ConfirmModal'
 
 type Status = 'all' | 'pending' | 'confirmed' | 'cancelled'
 
@@ -13,6 +15,10 @@ export const AdminReservations = () => {
   const [filter, setFilter] = useState<Status>('pending')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedReservation, setSelectedReservation] = useState<any | null>(null)
+  const [reservationToDelete, setReservationToDelete] = useState<any | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
 
   useEffect(() => {
     fetchReservations()
@@ -67,6 +73,30 @@ export const AdminReservations = () => {
     }
   }
 
+  const deleteReservation = async (id: string) => {
+    const previousReservations = [...reservations]
+    setReservations((current) => current.filter((res) => res.id !== id))
+
+    const { error } = await supabase
+      .from('reservations')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      alert("Erreur lors de la suppression : " + error.message)
+      setReservations(previousReservations)
+    }
+  }
+
+  const confirmDeleteReservation = async () => {
+    if (!reservationToDelete) return
+    setDeleting(true)
+    await deleteReservation(reservationToDelete.id)
+    setDeleting(false)
+    setReservationToDelete(null)
+    setSelectedReservation(null)
+  }
+
   const translateStatus = (status: string) => {
     switch (status) {
       case 'confirmed': return 'Confirmé'
@@ -83,12 +113,29 @@ export const AdminReservations = () => {
     }
   }
 
-  const filteredReservations = reservations.filter(res => {
+  const filteredReservations = useMemo(() => reservations.filter(res => {
     const matchesFilter = filter === 'all' ? true : res.status === filter;
     const matchesSearch = res.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           res.phone.includes(searchTerm);
     return matchesFilter && matchesSearch;
-  })
+  }), [reservations, filter, searchTerm])
+
+  const totalPages = Math.max(1, Math.ceil(filteredReservations.length / pageSize))
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filter, searchTerm, pageSize])
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
+
+  const paginatedReservations = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredReservations.slice(start, start + pageSize)
+  }, [filteredReservations, currentPage, pageSize])
 
   const counters = {
     all: reservations.length,
@@ -152,7 +199,7 @@ export const AdminReservations = () => {
           <>
           {/* Mobile: compact list */}
           <div className="md:hidden space-y-3">
-            {filteredReservations.map((res) => (
+            {paginatedReservations.map((res) => (
               <div key={res.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -186,7 +233,7 @@ export const AdminReservations = () => {
 
           {/* Desktop: rich cards */}
           <div className="hidden md:grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6">
-            {filteredReservations.map(res => (
+            {paginatedReservations.map(res => (
               <div key={res.id} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col group">
                 {/* Status Indicator Bar */}
                 <div className={`absolute top-0 left-0 right-0 h-1.5 transition-colors duration-500 ${
@@ -239,10 +286,27 @@ export const AdminReservations = () => {
                   >
                     <XCircle className="w-3.5 h-3.5" /> {res.status === 'cancelled' ? 'Annulé' : 'Annuler'}
                   </button>
+                  <button
+                    onClick={() => {
+                      setReservationToDelete(res)
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl font-black text-[10px] transition-all bg-gray-100 text-gray-500 hover:bg-red-500 hover:text-white"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Supprimer
+                  </button>
                 </div>
               </div>
             ))}
           </div>
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredReservations.length}
+            pageSize={pageSize}
+            pageSizeOptions={[10, 20, 40]}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
           </>
         )}
 
@@ -296,9 +360,26 @@ export const AdminReservations = () => {
                 <XCircle className="w-4 h-4" /> Annuler
               </button>
             </div>
+            <button
+              onClick={() => {
+                setReservationToDelete(selectedReservation)
+              }}
+              className="w-full mt-2 py-3 rounded-xl bg-gray-100 text-gray-600 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5"
+            >
+              <Trash2 className="w-4 h-4" /> Supprimer
+            </button>
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={Boolean(reservationToDelete)}
+        onClose={() => setReservationToDelete(null)}
+        onConfirm={confirmDeleteReservation}
+        loading={deleting}
+        title="Supprimer cette réservation ?"
+        message={`Cette action supprimera définitivement la réservation de "${reservationToDelete?.full_name || ''}".`}
+      />
     </AdminLayout>
   )
 }

@@ -143,8 +143,8 @@ export const AdminSettings = () => {
             <Loader2 className="w-10 h-10 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="bg-white p-8 sm:p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-6 max-w-4xl">
-            <div className="w-full flex justify-center">
+          <div className="w-full space-y-6">
+            <div className="w-full flex justify-center lg:hidden">
               <div className="inline-flex bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
               <button
                 type="button"
@@ -171,8 +171,13 @@ export const AdminSettings = () => {
               </div>
             </div>
 
-            {activeTab === 'contact' ? (
-              <form onSubmit={onSave} className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <form
+                onSubmit={onSave}
+                className={`bg-white p-8 sm:p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-6 ${
+                  activeTab === 'contact' ? 'block' : 'hidden'
+                } lg:block`}
+              >
                 <h2 className="text-xl font-black mb-2 flex items-center gap-2">
                   <Settings className="w-5 h-5 text-primary" /> Coordonnées publiques
                 </h2>
@@ -274,8 +279,13 @@ export const AdminSettings = () => {
                   )}
                 </button>
               </form>
-            ) : (
-              <form onSubmit={onUpdatePassword} className="space-y-6">
+
+              <form
+                onSubmit={onUpdatePassword}
+                className={`bg-white p-8 sm:p-10 rounded-[40px] border border-gray-100 shadow-sm space-y-6 h-fit ${
+                  activeTab === 'security' ? 'block' : 'hidden'
+                } lg:block`}
+              >
                 <h2 className="text-xl font-black mb-2 flex items-center gap-2">
                   <ShieldCheck className="w-5 h-5 text-primary" /> Sécurité du compte
                 </h2>
@@ -329,7 +339,7 @@ export const AdminSettings = () => {
                   )}
                 </button>
               </form>
-            )}
+            </div>
           </div>
         )}
       </div>

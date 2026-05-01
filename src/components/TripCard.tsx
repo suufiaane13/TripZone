@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { Calendar, Users, MapPin } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import type { Trip } from '../types'
 
 interface TripCardProps {
@@ -9,13 +9,16 @@ interface TripCardProps {
 }
 
 export const TripCard = ({ trip, onBookClick }: TripCardProps) => {
+  const navigate = useNavigate()
+
   return (
     <motion.div 
       initial={{ y: 30, opacity: 0 }}
       whileInView={{ y: 0, opacity: 1 }}
       viewport={{ once: true }}
       whileHover={{ y: -10 }}
-      className="group bg-white rounded-[40px] overflow-hidden shadow-sm hover:shadow-2xl hover:shadow-primary/10 transition-all border border-gray-100 flex flex-col h-full relative"
+      onClick={() => navigate(`/trip/${trip.id}`)}
+      className="group bg-white rounded-[40px] overflow-hidden shadow-sm hover:shadow-2xl hover:shadow-primary/10 transition-all border border-gray-100 flex flex-col h-full relative cursor-pointer"
     >
       {/* Image Section */}
       <div className="relative h-72 overflow-hidden shrink-0">
@@ -55,21 +58,18 @@ export const TripCard = ({ trip, onBookClick }: TripCardProps) => {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-3 pt-6 border-t border-gray-50 mt-auto">
+        {/* Action Button */}
+        <div className="pt-6 border-t border-gray-50 mt-auto">
           <button 
-            onClick={onBookClick}
-            className="flex-[2] bg-primary text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onBookClick(e)
+            }}
+            className="w-full bg-primary text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
           >
             Réserver
           </button>
-          
-          <Link 
-            to={`/trip/${trip.id}`}
-            className="flex-1 bg-gray-50 text-gray-400 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-900 hover:text-white transition-all flex items-center justify-center gap-2"
-          >
-            Détails
-          </Link>
         </div>
       </div>
     </motion.div>

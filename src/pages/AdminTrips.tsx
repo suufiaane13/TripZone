@@ -1,22 +1,38 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTrips } from '../hooks/useTrips'
 import { 
   Plus, Trash2, Calendar, Tag, Loader2, Edit, FileText, Map, Users
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { AdminLayout } from '../components/AdminLayout'
-import { AdminTripModal } from '../components/AdminTripModal'
 import { AdminManifestModal } from '../components/AdminManifestModal'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { PaginationControls } from '../components/PaginationControls'
 import type { Trip } from '../types'
 
 export const AdminTrips = () => {
   const { trips, loading, refetch } = useTrips()
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const navigate = useNavigate()
   const [isManifestOpen, setIsManifestOpen] = useState(false)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+
+  const totalPages = Math.max(1, Math.ceil(trips.length / pageSize))
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
+
+  const paginatedTrips = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return trips.slice(start, start + pageSize)
+  }, [trips, currentPage, pageSize])
 
   const handleDeleteClick = (trip: Trip) => {
     setSelectedTrip(trip)
@@ -39,8 +55,7 @@ export const AdminTrips = () => {
   }
 
   const handleEditTrip = (trip: Trip) => {
-    setSelectedTrip(trip)
-    setIsModalOpen(true)
+    navigate(`/admin/trips/${trip.id}/edit`)
   }
 
   const handleOpenManifest = (trip: Trip) => {
@@ -58,7 +73,7 @@ export const AdminTrips = () => {
             <p className="text-gray-400 font-medium mt-4">Créez et organisez vos itinéraires d'exception.</p>
           </div>
           <button 
-            onClick={() => { setSelectedTrip(null); setIsModalOpen(true); }}
+            onClick={() => navigate('/admin/trips/new')}
             className="w-full lg:w-auto bg-gray-900 text-white px-10 py-5 rounded-[24px] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl shadow-gray-900/20 hover:scale-105 active:scale-95 transition-all"
           >
             <Plus className="w-6 h-6" /> Nouveau Trajet
@@ -68,8 +83,9 @@ export const AdminTrips = () => {
         {loading ? (
           <div className="flex justify-center p-20"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>
         ) : (
+          <>
           <div className="grid grid-cols-1 gap-6">
-            {trips.map(trip => (
+            {paginatedTrips.map(trip => (
               <div key={trip.id} className={`group bg-white p-4 lg:p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center gap-6 lg:gap-10 transition-all hover:shadow-xl ${trip.status === 'completed' ? 'opacity-60 grayscale' : ''}`}>
                 <div className="w-full sm:w-32 h-32 rounded-[24px] overflow-hidden shrink-0 relative">
                   <img src={trip.image_url} className="w-full h-full object-cover" />
@@ -109,6 +125,19 @@ export const AdminTrips = () => {
               </div>
             ))}
           </div>
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={trips.length}
+            pageSize={pageSize}
+            pageSizeOptions={[5, 10, 20]}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size)
+              setCurrentPage(1)
+            }}
+          />
+          </>
         )}
 
         {trips.length === 0 && !loading && (
@@ -118,13 +147,6 @@ export const AdminTrips = () => {
           </div>
         )}
       </div>
-
-      <AdminTripModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onSuccess={refetch}
-        tripToEdit={selectedTrip}
-      />
 
       <AdminManifestModal 
         isOpen={isManifestOpen}

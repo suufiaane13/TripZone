@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import { ArrowRight, Star, ShieldCheck, Zap } from 'lucide-react'
 
 export const Hero = () => {
@@ -34,10 +35,10 @@ export const Hero = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-6 mb-16">
-              <a href="#trips" className="group bg-gray-900 text-white px-10 py-6 rounded-[24px] font-black text-lg flex items-center justify-center gap-3 hover:bg-black hover:-translate-y-1 transition-all shadow-2xl shadow-gray-900/20">
+              <Link to="/trajets" className="group bg-gray-900 text-white px-10 py-6 rounded-[24px] font-black text-lg flex items-center justify-center gap-3 hover:bg-black hover:-translate-y-1 transition-all shadow-2xl shadow-gray-900/20">
                 Explorer 
                 <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
-              </a>
+              </Link>
               <div className="flex items-center gap-6 px-4 border-l-2 border-gray-100">
                 <div className="flex -space-x-3">
                   {[1,2,3].map(i => (
@@ -69,7 +70,7 @@ export const Hero = () => {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
-            className="relative"
+            className="relative pb-8 lg:pb-12"
           >
             <div className="relative aspect-[4/5] sm:aspect-video lg:aspect-[4/5] rounded-[48px] lg:rounded-[64px] overflow-hidden shadow-2xl border-[8px] lg:border-[12px] border-white">
               <img 
@@ -81,8 +82,6 @@ export const Hero = () => {
               
             </div>
 
-            {/* Decorative Dots */}
-            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-[radial-gradient(#e5e7eb_2px,transparent_2px)] [background-size:16px_16px] -z-10" />
           </motion.div>
         </div>
       </div>

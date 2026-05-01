@@ -69,25 +69,44 @@ export const AdminManifestModal = ({ isOpen, onClose, trip }: AdminManifestModal
             className="relative bg-white w-full sm:max-w-4xl h-full sm:h-auto sm:max-h-[92vh] sm:rounded-[40px] shadow-2xl flex flex-col overflow-hidden print:static print:w-full print:h-auto print:shadow-none print:rounded-none"
           >
             {/* Header - Screen Only */}
-            <div className="p-6 sm:p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 print:hidden shrink-0">
-              <div className="flex items-center gap-4">
-                <div className="bg-primary p-2 rounded-xl text-white">
-                  <FileText className="w-6 h-6" />
+            <div className="p-4 sm:p-8 border-b border-gray-100 bg-gray-50/50 print:hidden shrink-0 space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="bg-primary p-2 rounded-xl text-white shrink-0">
+                    <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight leading-tight">
+                      Liste des Passagers
+                    </h2>
+                    <p className="text-[10px] sm:text-xs text-gray-400 font-black uppercase tracking-wider truncate max-w-[58vw] sm:max-w-[520px]">
+                      {trip.title}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-black text-gray-900 tracking-tight">Liste des Passagers</h2>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{trip.title}</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={handleExportExcel} className="hidden sm:flex items-center gap-2 px-6 py-3 bg-green-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-green-500/20 active:scale-95 transition-all">
-                  <Download className="w-4 h-4" /> Excel
-                </button>
-                <button onClick={handlePrint} className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-all">
-                  <Printer className="w-4 h-4" /> Imprimer
-                </button>
-                <button onClick={onClose} className="p-3.5 bg-white text-gray-400 border border-gray-100 rounded-2xl active:scale-95 transition-all">
+                <button
+                  onClick={onClose}
+                  className="p-3 bg-white text-gray-400 border border-gray-100 rounded-2xl active:scale-95 transition-all shrink-0"
+                  aria-label="Fermer"
+                >
                   <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:flex gap-2">
+                <button
+                  onClick={handleExportExcel}
+                  className="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-green-500 text-white rounded-2xl font-black text-xs sm:text-sm shadow-xl shadow-green-500/20 active:scale-95 transition-all"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Excel</span>
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-gray-900 text-white rounded-2xl font-black text-xs sm:text-sm shadow-xl active:scale-95 transition-all"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Imprimer</span>
                 </button>
               </div>
             </div>
@@ -132,7 +151,7 @@ export const AdminManifestModal = ({ isOpen, onClose, trip }: AdminManifestModal
                   </thead>
                   <tbody>
                     {reservations.map((res, i) => (
-                      <tr key={res.id} className="border-b border-gray-100">
+                      <tr key={`${res.id || 'print-row'}-${res.phone || 'na'}-${i}`} className="border-b border-gray-100">
                         <td className="py-4 px-2 font-bold text-gray-400">{i + 1}</td>
                         <td className="py-4 px-2 font-black text-gray-900">{res.full_name}</td>
                         <td className="py-4 px-2 text-center font-black">{res.persons}</td>
@@ -180,7 +199,7 @@ export const AdminManifestModal = ({ isOpen, onClose, trip }: AdminManifestModal
                 ) : (
                   <div className="space-y-3">
                     {reservations.map((res, i) => (
-                      <div key={res.id} className="bg-white p-5 rounded-[28px] border border-gray-100 shadow-sm flex items-center justify-between gap-4 group hover:border-primary/20 transition-all">
+                      <div key={`${res.id || 'screen-row'}-${res.phone || 'na'}-${i}`} className="bg-white p-5 rounded-[28px] border border-gray-100 shadow-sm flex items-center justify-between gap-4 group hover:border-primary/20 transition-all">
                         <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center shrink-0 text-xs font-black text-gray-300 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                           {i + 1}
                         </div>

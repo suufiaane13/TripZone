@@ -2,10 +2,12 @@ import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Home } from './pages/Home'
+import { PublicTrips } from './pages/PublicTrips'
 import { TripDetails } from './pages/TripDetails'
 import { AdminLogin } from './pages/AdminLogin'
 import { AdminDashboard } from './pages/AdminDashboard'
 import { AdminTrips } from './pages/AdminTrips'
+import { AdminTripForm } from './pages/AdminTripForm'
 import { AdminReservations } from './pages/AdminReservations'
 import { AdminProfile } from './pages/AdminProfile'
 import { AdminSettings } from './pages/AdminSettings'
@@ -54,19 +56,18 @@ function App() {
                 
                 {/* Desktop Menu */}
                 <div className="hidden md:flex gap-10 items-center">
-                  <a 
-                    href="#trips" 
-                    onClick={(e) => {
-                      if (location.pathname === '/') {
-                        e.preventDefault();
-                        document.getElementById('trips')?.scrollIntoView({ behavior: 'smooth' });
-                      }
-                    }}
-                    className="text-xs font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors relative group"
+                  <Link 
+                    to="/trajets" 
+                    onClick={() => handleLinkClick('/trajets')}
+                    className={`text-xs font-black uppercase tracking-widest transition-colors relative group ${
+                      location.pathname === '/trajets' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'
+                    }`}
                   >
                     Trajets
-                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full" />
-                  </a>
+                    <span className={`absolute -bottom-1 left-0 h-0.5 bg-primary transition-all ${
+                      location.pathname === '/trajets' ? 'w-full' : 'w-0 group-hover:w-full'
+                    }`} />
+                  </Link>
                   <Link 
                     to="/about" 
                     onClick={() => handleLinkClick('/about')}
@@ -107,19 +108,13 @@ function App() {
                   className="fixed inset-0 z-[105] bg-white/95 backdrop-blur-3xl md:hidden pt-32 px-6"
                 >
                   <div className="flex flex-col gap-6">
-                    <a 
-                      href="#trips" 
-                      onClick={(e) => {
-                        setIsMenuOpen(false);
-                        if (location.pathname === '/') {
-                          e.preventDefault();
-                          document.getElementById('trips')?.scrollIntoView({ behavior: 'smooth' });
-                        }
-                      }} 
+                    <Link 
+                      to="/trajets"
+                      onClick={() => handleLinkClick('/trajets')}
                       className="text-4xl font-black text-gray-900 tracking-tighter hover:text-primary transition-colors"
                     >
                       Nos Trajets
-                    </a>
+                    </Link>
                     <Link to="/about" onClick={() => handleLinkClick('/about')} className="text-4xl font-black text-gray-900 tracking-tighter hover:text-primary transition-colors">À Propos</Link>
                     <Link to="/admin/dashboard" onClick={() => handleLinkClick('/admin/dashboard')} className="text-4xl font-black text-gray-900 tracking-tighter hover:text-primary transition-colors">Espace Admin</Link>
                     
@@ -144,6 +139,7 @@ function App() {
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/trajets" element={<PublicTrips />} />
           <Route path="/about" element={<About />} />
           <Route path="/trip/:id" element={<TripDetails />} />
           <Route path="/admin/login" element={<AdminLogin />} />
@@ -162,6 +158,22 @@ function App() {
                 <AdminTrips />
               </ProtectedRoute>
             } 
+          />
+          <Route
+            path="/admin/trips/new"
+            element={
+              <ProtectedRoute>
+                <AdminTripForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/trips/:tripId/edit"
+            element={
+              <ProtectedRoute>
+                <AdminTripForm />
+              </ProtectedRoute>
+            }
           />
           <Route 
             path="/admin/reservations" 
@@ -228,7 +240,7 @@ function App() {
                   <ul className="space-y-4 text-gray-400 text-sm font-medium">
                     <li><Link to="/" className="hover:text-primary transition-colors">Accueil</Link></li>
                     <li><Link to="/about" className="hover:text-primary transition-colors">À Propos</Link></li>
-                    <li><a href="#trips" className="hover:text-primary transition-colors">Trajets</a></li>
+                    <li><Link to="/trajets" className="hover:text-primary transition-colors">Trajets</Link></li>
                   </ul>
                 </div>
 
