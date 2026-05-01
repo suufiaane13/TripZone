@@ -33,19 +33,16 @@ export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProp
     setErrorMsg(null)
 
     try {
-      const { data, error } = await supabase
-        .from('reservations')
-        .insert({
-          trip_id: trip.id,
-          full_name: formData.fullName,
-          phone: formData.phone,
-          persons: formData.persons
-        })
-        .select()
-        .single()
+      const { data: newId, error } = await supabase.rpc('create_public_reservation', {
+        p_trip_id: trip.id,
+        p_full_name: formData.fullName,
+        p_phone: formData.phone,
+        p_persons: formData.persons,
+      })
 
       if (error) throw error
-      setResId(data.id)
+      if (!newId) throw new Error('Réponse invalide du serveur.')
+      setResId(newId as string)
       setStatus('success')
     } catch (err: any) {
       setErrorMsg(err.message || 'Une erreur est survenue lors de la réservation.')

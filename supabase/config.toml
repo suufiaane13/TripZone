@@ -1,0 +1,6 @@
+# Doc: https://supabase.com/docs/guides/cli/config
+# Remplacer project_id par l’ID du projet (Dashboard → Settings → General) si tu utilises le CLI lié.
+
+[functions.notify-telegram]
+# Le webhook base de données n’envoie pas de JWT utilisateur — désactive la vérif JWT pour cette fonction.
+verify_jwt = false

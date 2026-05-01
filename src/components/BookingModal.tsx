@@ -25,11 +25,11 @@ export const BookingModal = ({ isOpen, onClose, trip }: BookingModalProps) => {
     
     setLoading(true)
     try {
-      const { error } = await supabase.from('reservations').insert({
-        trip_id: trip.id,
-        full_name: formData.full_name,
-        phone: formData.phone,
-        persons: formData.persons
+      const { error } = await supabase.rpc('create_public_reservation', {
+        p_trip_id: trip.id,
+        p_full_name: formData.full_name,
+        p_phone: formData.phone,
+        p_persons: formData.persons,
       })
 
       if (error) throw error

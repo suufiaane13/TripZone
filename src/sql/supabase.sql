@@ -64,8 +64,14 @@ DROP POLICY IF EXISTS "Allow admin update reservations" ON reservations;
 CREATE POLICY "Allow admin update reservations" ON reservations FOR UPDATE USING (auth.role() = 'authenticated');
 
 -- 6. Trigger pour mettre à jour les places intelligemment
+-- SECURITY DEFINER: le trigger tourne sinon avec le rôle session (anon) et l'UPDATE sur
+-- `trips` est bloqué par RLS — d'où l'erreur RLS au moment d'une réservation publique.
 CREATE OR REPLACE FUNCTION update_trip_places_smart()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
     -- Cas 1: Nouvelle réservation
     IF (TG_OP = 'INSERT') THEN
@@ -98,13 +104,45 @@ BEGIN
     
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS on_reservation_change ON reservations;
 CREATE TRIGGER on_reservation_change
 AFTER INSERT OR UPDATE OR DELETE ON reservations
 FOR EACH ROW
 EXECUTE FUNCTION update_trip_places_smart();
+
+-- 6b. Réservation publique : insert + retour de l'id sans exposer SELECT sur toute la table
+-- (INSERT ... RETURNING avec RLS exige une politique SELECT pour anon — ce RPC évite ça.)
+DROP FUNCTION IF EXISTS public.create_public_reservation(uuid, text, text, integer);
+CREATE OR REPLACE FUNCTION public.create_public_reservation(
+  p_trip_id uuid,
+  p_full_name text,
+  p_phone text,
+  p_persons integer
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  new_id uuid;
+BEGIN
+  IF p_persons IS NULL OR p_persons < 1 THEN
+    RAISE EXCEPTION 'persons must be >= 1';
+  END IF;
+
+  INSERT INTO reservations (trip_id, full_name, phone, persons)
+  VALUES (p_trip_id, trim(p_full_name), trim(p_phone), p_persons)
+  RETURNING id INTO new_id;
+
+  RETURN new_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.create_public_reservation(uuid, text, text, integer) TO anon;
+GRANT EXECUTE ON FUNCTION public.create_public_reservation(uuid, text, text, integer) TO authenticated;
 
 -- 7. Paramètres globaux du site (contacts publics dynamiques)
 CREATE TABLE IF NOT EXISTS site_settings (
