@@ -33,12 +33,22 @@ export const BookingModal = ({ isOpen, onClose, trip }: BookingModalProps) => {
       })
 
       if (error) throw error
-      if (newId) {
-        void supabase.functions
-          .invoke('notify-telegram', { body: { reservation_id: newId } })
-          .then(({ error: invokeErr }) => {
-            if (invokeErr) console.warn('[TripZone] Telegram:', invokeErr.message)
-          })
+      if (newId && trip) {
+        void supabase.functions.invoke('notify-telegram', {
+          body: {
+            trip_title: `${trip.title} (${new Date(trip.date).toLocaleDateString('fr-FR')})`,
+            record: {
+              id: newId as string,
+              trip_id: trip.id,
+              full_name: formData.full_name,
+              phone: formData.phone,
+              persons: formData.persons,
+              status: 'pending',
+            },
+          },
+        }).then(({ error: invokeErr }) => {
+          if (invokeErr) console.warn('[TripZone] Telegram:', invokeErr.message)
+        })
       }
       setSuccess(true)
       setTimeout(() => {

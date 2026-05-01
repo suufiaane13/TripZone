@@ -25,6 +25,7 @@ const TELEGRAM_API = "https://api.telegram.org";
 type DbWebhookPayload = {
   type?: string;
   table?: string;
+  trip_title?: string;
   record?: {
     id: string;
     trip_id: string;
@@ -73,6 +74,13 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Invalid JSON" }, 400);
   }
 
+  /** Corps complet envoyé par le site après résa — pas besoin de SERVICE_ROLE_KEY. */
+  const clientDirectNotify =
+    !!payload.record?.id &&
+    !!payload.record?.trip_id &&
+    typeof payload.trip_title === "string" &&
+    payload.trip_title.length > 0;
+
   const clientNotifyById =
     typeof payload.reservation_id === "string" &&
     payload.reservation_id.length > 0 &&
@@ -81,7 +89,11 @@ Deno.serve(async (req: Request) => {
   const secret = Deno.env.get("NOTIFY_WEBHOOK_SECRET");
   if (secret) {
     const sent = req.headers.get("x-notify-secret");
-    if (sent !== secret && !clientNotifyById) {
+    if (
+      sent !== secret &&
+      !clientNotifyById &&
+      !clientDirectNotify
+    ) {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
   }
@@ -92,8 +104,14 @@ Deno.serve(async (req: Request) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
   let row = payload.record;
+  let tripTitlePreset: string | null = null;
 
-  if (clientNotifyById) {
+  if (clientDirectNotify && payload.record) {
+    row = payload.record;
+    tripTitlePreset = payload.trip_title!.trim();
+  }
+
+  if (clientNotifyById && !clientDirectNotify) {
     if (!supabaseUrl || !serviceKey) {
       console.error("SERVICE_ROLE_KEY needed for reservation_id notify path");
       return jsonResponse({ error: "Server misconfigured" }, 500);
@@ -138,9 +156,9 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Server misconfigured" }, 500);
   }
 
-  let tripTitle = "Trajet inconnu";
+  let tripTitle = tripTitlePreset ?? "Trajet inconnu";
 
-  if (supabaseUrl && serviceKey) {
+  if (!tripTitlePreset && supabaseUrl && serviceKey) {
     const supabase = createClient(supabaseUrl, serviceKey);
     const { data: trip } = await supabase
       .from("trips")

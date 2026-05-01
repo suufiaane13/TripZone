@@ -45,14 +45,26 @@ export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProp
       setResId(newId as string)
       setStatus('success')
 
-      // Telegram via Edge Function (Netlify ne déclenche pas les webhooks Supabase — notify depuis le client).
+      // Telegram : envoi direct (record + titre) — fonctionne même sans SERVICE_ROLE_KEY sur Edge.
       void supabase.functions
         .invoke('notify-telegram', {
-          body: { reservation_id: newId },
+          body: {
+            trip_title: `${trip.title} (${new Date(trip.date).toLocaleDateString('fr-FR')})`,
+            record: {
+              id: newId as string,
+              trip_id: trip.id,
+              full_name: formData.fullName,
+              phone: formData.phone,
+              persons: formData.persons,
+              status: 'pending',
+            },
+          },
         })
-        .then(({ error: invokeErr }) => {
+        .then(({ data, error: invokeErr }) => {
           if (invokeErr) {
-            console.warn('[TripZone] Notification Telegram:', invokeErr.message)
+            console.warn('[TripZone] Telegram:', invokeErr.message, invokeErr)
+          } else if (import.meta.env.DEV) {
+            console.info('[TripZone] Telegram OK', data)
           }
         })
     } catch (err: any) {
