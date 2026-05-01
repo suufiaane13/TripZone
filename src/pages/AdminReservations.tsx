@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { 
-  CheckCircle, XCircle, Loader2, Phone, Calendar, Filter, ChevronRight, X, Trash2
+  CheckCircle, XCircle, Loader2, Phone, Calendar, Filter, ChevronRight, X, Trash2, Route
 } from 'lucide-react'
 import { AdminLayout } from '../components/AdminLayout'
 import { PaginationControls } from '../components/PaginationControls'
@@ -13,6 +13,7 @@ export const AdminReservations = () => {
   const [reservations, setReservations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<Status>('pending')
+  const [tripFilter, setTripFilter] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedReservation, setSelectedReservation] = useState<any | null>(null)
   const [reservationToDelete, setReservationToDelete] = useState<any | null>(null)
@@ -113,18 +114,38 @@ export const AdminReservations = () => {
     }
   }
 
+  const tripOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const res of reservations) {
+      const id = res.trip_id as string | undefined
+      if (!id) continue
+      const title = (res.trips?.title as string) || 'Trajet inconnu'
+      if (!map.has(id)) map.set(id, title)
+    }
+    return Array.from(map.entries())
+      .map(([id, title]) => ({ id, title }))
+      .sort((a, b) => a.title.localeCompare(b.title, 'fr'))
+  }, [reservations])
+
   const filteredReservations = useMemo(() => reservations.filter(res => {
-    const matchesFilter = filter === 'all' ? true : res.status === filter;
-    const matchesSearch = res.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          res.phone.includes(searchTerm);
-    return matchesFilter && matchesSearch;
-  }), [reservations, filter, searchTerm])
+    const matchesFilter = filter === 'all' ? true : res.status === filter
+    const matchesTrip = tripFilter === 'all' ? true : res.trip_id === tripFilter
+    const matchesSearch = res.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          res.phone.includes(searchTerm)
+    return matchesFilter && matchesTrip && matchesSearch
+  }), [reservations, filter, tripFilter, searchTerm])
 
   const totalPages = Math.max(1, Math.ceil(filteredReservations.length / pageSize))
 
   useEffect(() => {
+    if (tripFilter !== 'all' && !tripOptions.some((t) => t.id === tripFilter)) {
+      setTripFilter('all')
+    }
+  }, [tripOptions, tripFilter])
+
+  useEffect(() => {
     setCurrentPage(1)
-  }, [filter, searchTerm, pageSize])
+  }, [filter, tripFilter, searchTerm, pageSize])
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -155,17 +176,35 @@ export const AdminReservations = () => {
           </div>
           
           <div className="flex flex-col gap-3 w-full lg:w-auto">
-            {/* Search Bar */}
-            <div className="relative w-full lg:min-w-[360px]">
-              <input 
-                type="text"
-                placeholder="Rechercher un passager ou téléphone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white border border-gray-100 px-6 py-3.5 rounded-[20px] text-sm font-bold shadow-sm focus:outline-none focus:border-primary/30 transition-all pl-12"
-              />
-              <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              {/* Search Bar */}
+              <div className="relative w-full lg:min-w-[280px] flex-1">
+                <input 
+                  type="text"
+                  placeholder="Rechercher un passager ou téléphone..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-white border border-gray-100 px-6 py-3.5 rounded-[20px] text-sm font-bold shadow-sm focus:outline-none focus:border-primary/30 transition-all pl-12"
+                />
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                </div>
+              </div>
+
+              {/* Filtre par trajet */}
+              <div className="relative w-full sm:w-auto sm:min-w-[220px] lg:min-w-[260px]">
+                <select
+                  value={tripFilter}
+                  onChange={(e) => setTripFilter(e.target.value)}
+                  className="w-full bg-white border border-gray-100 px-5 py-3.5 pr-11 rounded-[20px] text-sm font-bold shadow-sm focus:outline-none focus:border-primary/30 transition-all appearance-none cursor-pointer"
+                  aria-label="Filtrer par trajet"
+                >
+                  <option value="all">Tous les trajets</option>
+                  {tripOptions.map((t) => (
+                    <option key={t.id} value={t.id}>{t.title}</option>
+                  ))}
+                </select>
+                <Route className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
 

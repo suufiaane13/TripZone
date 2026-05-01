@@ -178,7 +178,7 @@ Deno.serve(async (req: Request) => {
     `<b>Nom :</b> ${escapeHtml(row.full_name)}`,
     `<b>Téléphone :</b> ${escapeHtml(row.phone)}`,
     `<b>Personnes :</b> ${row.persons}`,
-    `<b>Statut :</b> ${escapeHtml(row.status ?? "pending")}`,
+    `<b>Statut :</b> ${escapeHtml(statusFr(row.status))}`,
     "",
     `<i>ID réservation : ${row.id}</i>`,
   ];
@@ -215,4 +215,17 @@ function escapeHtml(s: string): string {
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
+}
+
+function statusFr(status: string | undefined): string {
+  switch (status) {
+    case "confirmed":
+      return "Confirmé";
+    case "cancelled":
+      return "Annulé";
+    case "pending":
+      return "En attente";
+    default:
+      return status?.trim() ? status : "En attente";
+  }
 }

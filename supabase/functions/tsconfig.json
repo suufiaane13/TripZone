@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "types": [],
+    "paths": {
+      "https://esm.sh/@supabase/supabase-js@2.49.8": [
+        "../../node_modules/@supabase/supabase-js"
+      ]
+    }
+  },
+  "include": ["./**/*.ts", "./**/*.d.ts"]
+}
