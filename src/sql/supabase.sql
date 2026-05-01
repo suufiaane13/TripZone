@@ -72,36 +72,38 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+    old_contrib INTEGER;
+    new_contrib INTEGER;
+    delta INTEGER;
 BEGIN
-    -- Cas 1: Nouvelle réservation
+    -- Seules les réservations **confirmées** comptent dans places_reserved.
+
     IF (TG_OP = 'INSERT') THEN
-        UPDATE trips
-        SET places_reserved = places_reserved + NEW.persons
-        WHERE id = NEW.trip_id;
-    
-    -- Cas 2: Mise à jour du statut (Annulation ou confirmation)
-    ELSIF (TG_OP = 'UPDATE') THEN
-        -- Si on passe de (pending/confirmed) à 'cancelled' -> on libère les places
-        IF (NEW.status = 'cancelled' AND OLD.status != 'cancelled') THEN
-            UPDATE trips
-            SET places_reserved = places_reserved - OLD.persons
-            WHERE id = OLD.trip_id;
-        -- Si on réactive une réservation annulée -> on reprend les places
-        ELSIF (OLD.status = 'cancelled' AND NEW.status != 'cancelled') THEN
+        IF (NEW.status = 'confirmed') THEN
             UPDATE trips
             SET places_reserved = places_reserved + NEW.persons
             WHERE id = NEW.trip_id;
         END IF;
 
-    -- Cas 3: Suppression de réservation
+    ELSIF (TG_OP = 'UPDATE') THEN
+        old_contrib := CASE WHEN OLD.status = 'confirmed' THEN OLD.persons ELSE 0 END;
+        new_contrib := CASE WHEN NEW.status = 'confirmed' THEN NEW.persons ELSE 0 END;
+        delta := new_contrib - old_contrib;
+        IF delta != 0 THEN
+            UPDATE trips
+            SET places_reserved = places_reserved + delta
+            WHERE id = NEW.trip_id;
+        END IF;
+
     ELSIF (TG_OP = 'DELETE') THEN
-        IF (OLD.status != 'cancelled') THEN
+        IF (OLD.status = 'confirmed') THEN
             UPDATE trips
             SET places_reserved = places_reserved - OLD.persons
             WHERE id = OLD.trip_id;
         END IF;
     END IF;
-    
+
     RETURN NULL;
 END;
 $$;
@@ -111,6 +113,15 @@ CREATE TRIGGER on_reservation_change
 AFTER INSERT OR UPDATE OR DELETE ON reservations
 FOR EACH ROW
 EXECUTE FUNCTION update_trip_places_smart();
+
+-- Recalcul global : places_reserved = somme (persons) des réservations confirmées uniquement.
+-- À exécuter après mise à jour du trigger si la base contenait déjà des données.
+UPDATE trips t
+SET places_reserved = COALESCE((
+    SELECT SUM(r.persons)::integer
+    FROM reservations r
+    WHERE r.trip_id = t.id AND r.status = 'confirmed'
+), 0);
 
 -- 6b. Réservation publique : insert + retour de l'id sans exposer SELECT sur toute la table
 -- (INSERT ... RETURNING avec RLS exige une politique SELECT pour anon — ce RPC évite ça.)
