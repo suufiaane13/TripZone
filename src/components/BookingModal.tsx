@@ -1,8 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Users, Phone, User, CheckCircle, Loader2, Calendar, MapPin } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Trip } from '../types'
+import { formatReservationDuplicateError } from '../lib/reservationErrors'
 
 interface BookingModalProps {
   isOpen: boolean
@@ -11,6 +12,7 @@ interface BookingModalProps {
 }
 
 export const BookingModal = ({ isOpen, onClose, trip }: BookingModalProps) => {
+  const submitLock = useRef(false)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [formData, setFormData] = useState({
@@ -21,8 +23,8 @@ export const BookingModal = ({ isOpen, onClose, trip }: BookingModalProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!trip) return
-    
+    if (!trip || submitLock.current || loading) return
+    submitLock.current = true
     setLoading(true)
     try {
       const { data: newId, error } = await supabase.rpc('create_public_reservation', {
@@ -56,9 +58,10 @@ export const BookingModal = ({ isOpen, onClose, trip }: BookingModalProps) => {
         onClose()
       }, 3000)
     } catch (error: any) {
-      alert(error.message)
+      alert(formatReservationDuplicateError(error.message || 'Erreur'))
     } finally {
       setLoading(false)
+      submitLock.current = false
     }
   }
 

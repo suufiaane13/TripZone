@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { 
   CheckCircle, XCircle, Loader2, Phone, Calendar, Filter, ChevronRight, X, Trash2, Route
@@ -21,12 +21,55 @@ export const AdminReservations = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
 
-  useEffect(() => {
-    fetchReservations()
+  const fetchReservations = useCallback(async () => {
+    setLoading(true)
+    const [{ data }, countsResult] = await Promise.all([
+      supabase
+        .from('reservations')
+        .select('*, trips(*)')
+        .order('created_at', { ascending: false }),
+      supabase.rpc('get_reserved_places_by_trip'),
+    ])
 
-    // Configuration du Temps Réel
+    const countMap = new Map<string, number>()
+    if (!countsResult.error && Array.isArray(countsResult.data)) {
+      for (const row of countsResult.data as { trip_id: string; places_reserved: number }[]) {
+        countMap.set(row.trip_id, row.places_reserved)
+      }
+    }
+
+    const rows = data || []
+    const patched =
+      countsResult.error
+        ? rows
+        : rows.map((row: any) => {
+            const tid = row.trip_id as string
+            const reserved = countMap.get(tid) ?? 0
+            if (!row.trips) return row
+            return { ...row, trips: { ...row.trips, places_reserved: reserved } }
+          })
+
+    setReservations(patched)
+    setLoading(false)
+  }, [])
+
+  const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    void fetchReservations()
+
+    // Une insertion met à jour `reservations` puis le trigger met à jour `trips` → 2 événements.
+    // Un seul canal + debounce évite double rafraîchissement / impression de doublon.
+    const scheduleRefetch = () => {
+      if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current)
+      realtimeDebounceRef.current = setTimeout(() => {
+        realtimeDebounceRef.current = null
+        void fetchReservations()
+      }, 120)
+    }
+
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel('admin-reservations-sync')
       .on(
         'postgres_changes',
         {
@@ -34,26 +77,24 @@ export const AdminReservations = () => {
           schema: 'public',
           table: 'reservations'
         },
-        () => {
-          fetchReservations() // Re-fetch quand un changement arrive
-        }
+        scheduleRefetch
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'trips'
+        },
+        scheduleRefetch
       )
       .subscribe()
 
     return () => {
+      if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current)
       supabase.removeChannel(channel)
     }
-  }, [])
-
-  const fetchReservations = async () => {
-    setLoading(true)
-    const { data } = await supabase
-      .from('reservations')
-      .select('*, trips(*)')
-      .order('created_at', { ascending: false })
-    setReservations(data || [])
-    setLoading(false)
-  }
+  }, [fetchReservations])
 
   const updateReservationStatus = async (id: string, status: 'confirmed' | 'cancelled' | 'pending') => {
     // 1. Mise à jour "Optimiste" (Instantie dans l'interface)

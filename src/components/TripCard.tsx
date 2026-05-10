@@ -31,7 +31,10 @@ export const TripCard = ({ trip, onBookClick }: TripCardProps) => {
 
         {/* Badge Places */}
         <div className="absolute bottom-6 left-6 flex gap-2">
-          <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl text-white font-bold text-[10px] flex items-center gap-1.5 border border-white/10 uppercase tracking-widest">
+          <div
+            className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl text-white font-bold text-[10px] flex items-center gap-1.5 border border-white/10 uppercase tracking-widest"
+            title="Places restantes pour passagers (chaque réservation peut être pour plusieurs personnes)"
+          >
             <Users className="w-3.5 h-3.5 text-primary" /> {trip.places_total - (trip.places_reserved || 0)} libres
           </div>
         </div>

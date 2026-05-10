@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, User, Phone, Users, CheckCircle2, AlertCircle, Loader2, Send } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import type { Trip } from '../types'
 import { supabase } from '../lib/supabase'
 import { getWhatsAppLink, useSiteSettings } from '../lib/siteSettings'
+import { formatReservationDuplicateError } from '../lib/reservationErrors'
 
 interface ReservationModalProps {
   isOpen: boolean
@@ -13,6 +14,7 @@ interface ReservationModalProps {
 
 export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProps) => {
   const { settings } = useSiteSettings()
+  const submitLock = useRef(false)
   const [status, setStatus] = useState<'form' | 'submitting' | 'success' | 'error'>('form')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [resId, setResId] = useState<string | null>(null)
@@ -24,6 +26,8 @@ export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProp
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (submitLock.current || status === 'submitting') return
+    submitLock.current = true
     setStatus('submitting')
     setErrorMsg(null)
 
@@ -68,8 +72,11 @@ export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProp
           }
         })
     } catch (err: any) {
-      setErrorMsg(err.message || 'Une erreur est survenue lors de la réservation.')
+      const raw = err.message || 'Une erreur est survenue lors de la réservation.'
+      setErrorMsg(formatReservationDuplicateError(raw))
       setStatus('error')
+    } finally {
+      submitLock.current = false
     }
   }
 

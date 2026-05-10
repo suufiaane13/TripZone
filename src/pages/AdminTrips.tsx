@@ -105,8 +105,8 @@ export const AdminTrips = () => {
                     <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400">
                       <Tag className="w-4 h-4 text-primary" /> {trip.price} DH
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400">
-                      <Users className="w-4 h-4 text-primary" /> {trip.places_reserved}/{trip.places_total} places
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400" title="Nombre de passagers (somme des personnes par réservation), pas le nombre de dossiers">
+                      <Users className="w-4 h-4 text-primary" /> {trip.places_reserved}/{trip.places_total} pers.
                     </div>
                   </div>
                 </div>

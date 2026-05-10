@@ -88,8 +88,8 @@ export const TripDetails = () => {
                   <Users className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Places</p>
-                  <p className="text-lg font-bold text-gray-900">{trip.places_total - trip.places_reserved} dispos</p>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Places libres</p>
+                  <p className="text-lg font-bold text-gray-900">{trip.places_total - trip.places_reserved} pour passagers</p>
                 </div>
               </div>
             </div>
@@ -152,13 +152,20 @@ export const TripDetails = () => {
 
                 <div className="space-y-4 mb-8">
                   <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
-                    <span className="text-sm font-bold text-gray-500">Places totales</span>
+                    <span className="text-sm font-bold text-gray-500">Capacité bus</span>
                     <span className="font-bold">{trip.places_total}</span>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
-                    <span className="text-sm font-bold text-gray-500">Disponibles</span>
+                    <span className="text-sm font-bold text-gray-500">Passagers (réservations)</span>
+                    <span className="font-bold text-gray-900">{trip.places_reserved}</span>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
+                    <span className="text-sm font-bold text-gray-500">Places libres</span>
                     <span className="font-bold text-green-600">{trip.places_total - trip.places_reserved}</span>
                   </div>
+                  <p className="text-[11px] text-gray-400 font-medium leading-snug px-1">
+                    Le total « passagers » additionne le champ « nombre de personnes » de chaque demande (ex. 2 réservations de 2 et 3 pers. = 5).
+                  </p>
                 </div>
 
                 <button 

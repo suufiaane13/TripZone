@@ -63,6 +63,21 @@ CREATE POLICY "Allow admin read reservations" ON reservations FOR SELECT USING (
 DROP POLICY IF EXISTS "Allow admin update reservations" ON reservations;
 CREATE POLICY "Allow admin update reservations" ON reservations FOR UPDATE USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Allow admin delete reservations" ON reservations;
+CREATE POLICY "Allow admin delete reservations" ON reservations FOR DELETE USING (auth.role() = 'authenticated');
+
+-- Pas deux demandes actives (pending / confirmé) avec le même nom + téléphone sur un trajet.
+-- Les lignes « annulé » ne bloquent pas une nouvelle réservation (index partiel).
+DROP INDEX IF EXISTS reservations_unique_active_contact_per_trip;
+DROP INDEX IF EXISTS reservations_unique_name_phone_per_trip;
+CREATE UNIQUE INDEX reservations_unique_active_contact_per_trip
+ON public.reservations (
+  trip_id,
+  lower(trim(full_name)),
+  lower(trim(phone))
+)
+WHERE status IN ('pending', 'confirmed');
+
 -- 6. Trigger pour mettre à jour les places intelligemment
 -- SECURITY DEFINER: le trigger tourne sinon avec le rôle session (anon) et l'UPDATE sur
 -- `trips` est bloqué par RLS — d'où l'erreur RLS au moment d'une réservation publique.
@@ -77,7 +92,8 @@ DECLARE
     new_contrib INTEGER;
     delta INTEGER;
 BEGIN
-    -- Seules les réservations **confirmées** comptent dans places_reserved.
+    -- Seules les réservations **confirmées** par l’admin comptent dans places_reserved.
+    -- Une demande « en attente » (pending) ne réduit pas les places jusqu’à confirmation.
 
     IF (TG_OP = 'INSERT') THEN
         IF (NEW.status = 'confirmed') THEN
@@ -99,7 +115,7 @@ BEGIN
     ELSIF (TG_OP = 'DELETE') THEN
         IF (OLD.status = 'confirmed') THEN
             UPDATE trips
-            SET places_reserved = places_reserved - OLD.persons
+            SET places_reserved = GREATEST(0, places_reserved - OLD.persons)
             WHERE id = OLD.trip_id;
         END IF;
     END IF;
@@ -113,6 +129,10 @@ CREATE TRIGGER on_reservation_change
 AFTER INSERT OR UPDATE OR DELETE ON reservations
 FOR EACH ROW
 EXECUTE FUNCTION update_trip_places_smart();
+
+-- Si les places doublent encore : vérifier qu'il n'y a qu'un trigger utilisateur sur reservations
+-- (deux triggers identiques ajouteraient deux fois les places). Dans SQL Editor :
+-- SELECT tgname FROM pg_trigger WHERE tgrelid = 'public.reservations'::regclass AND NOT tgisinternal;
 
 -- Recalcul global : places_reserved = somme (persons) des réservations confirmées uniquement.
 -- À exécuter après mise à jour du trigger si la base contenait déjà des données.
@@ -144,9 +164,14 @@ BEGIN
     RAISE EXCEPTION 'persons must be >= 1';
   END IF;
 
-  INSERT INTO reservations (trip_id, full_name, phone, persons)
-  VALUES (p_trip_id, trim(p_full_name), trim(p_phone), p_persons)
-  RETURNING id INTO new_id;
+  BEGIN
+    INSERT INTO reservations (trip_id, full_name, phone, persons)
+    VALUES (p_trip_id, trim(p_full_name), trim(p_phone), p_persons)
+    RETURNING id INTO new_id;
+  EXCEPTION
+    WHEN unique_violation THEN
+      RAISE EXCEPTION 'Une réservation existe déjà pour ce trajet avec ce nom et ce numéro.';
+  END;
 
   RETURN new_id;
 END;
@@ -154,6 +179,24 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.create_public_reservation(uuid, text, text, integer) TO anon;
 GRANT EXECUTE ON FUNCTION public.create_public_reservation(uuid, text, text, integer) TO authenticated;
+
+-- Totaux affichés : uniquement réservations confirmées (aligné sur places_reserved / trigger).
+DROP FUNCTION IF EXISTS public.get_reserved_places_by_trip();
+CREATE OR REPLACE FUNCTION public.get_reserved_places_by_trip()
+RETURNS TABLE (trip_id uuid, places_reserved integer)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT r.trip_id, COALESCE(SUM(r.persons), 0)::integer AS places_reserved
+  FROM reservations r
+  WHERE r.status = 'confirmed'
+  GROUP BY r.trip_id;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_reserved_places_by_trip() TO anon;
+GRANT EXECUTE ON FUNCTION public.get_reserved_places_by_trip() TO authenticated;
 
 -- 7. Paramètres globaux du site (contacts publics dynamiques)
 CREATE TABLE IF NOT EXISTS site_settings (
