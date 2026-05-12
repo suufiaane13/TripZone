@@ -36,7 +36,7 @@ export const Home = () => {
       <section id="preview-trips" className="py-24 lg:py-32 container mx-auto px-6">
         <div className="mb-16 flex flex-col md:flex-row md:items-end md:justify-between gap-8">
           <div>
-            <span className="text-primary font-black uppercase tracking-[0.3em] text-xs mb-4 block">
+            <span className="text-primary font-black uppercase tracking-[0.3em] text-xs mb-4 block text-center md:text-left">
               Aperçu
             </span>
             <h2 className="text-5xl md:text-6xl font-black text-gray-900 tracking-tighter text-center md:text-left">

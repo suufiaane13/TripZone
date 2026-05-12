@@ -39,9 +39,9 @@ export const TripCard = ({ trip, onBookClick }: TripCardProps) => {
           <motion.img
             key={currentImageIndex}
             src={trip.images?.[currentImageIndex] || 'https://via.placeholder.com/400x300'}
-            initial={{ x: '-100%' }}
+            initial={{ x: '100%' }}
             animate={{ x: 0 }}
-            exit={{ x: '100%' }}
+            exit={{ x: '-100%' }}
             transition={{ 
               type: "spring", 
               stiffness: 100, 
