@@ -1,22 +1,27 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { 
-  CheckCircle, XCircle, Loader2, Phone, Calendar, Filter, ChevronRight, X, Trash2, Route
+  CheckCircle, XCircle, Loader2, Phone, Filter, ChevronRight, X, Trash2, Route
 } from 'lucide-react'
 import { AdminLayout } from '../components/AdminLayout'
 import { PaginationControls } from '../components/PaginationControls'
 import { ConfirmModal } from '../components/ConfirmModal'
+import type { Reservation, Trip } from '../types'
+
+interface ReservationWithTrip extends Reservation {
+  trips: Trip | null
+}
 
 type Status = 'all' | 'pending' | 'confirmed' | 'cancelled'
 
 export const AdminReservations = () => {
-  const [reservations, setReservations] = useState<any[]>([])
+  const [reservations, setReservations] = useState<ReservationWithTrip[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<Status>('pending')
   const [tripFilter, setTripFilter] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedReservation, setSelectedReservation] = useState<any | null>(null)
-  const [reservationToDelete, setReservationToDelete] = useState<any | null>(null)
+  const [selectedReservation, setSelectedReservation] = useState<ReservationWithTrip | null>(null)
+  const [reservationToDelete, setReservationToDelete] = useState<ReservationWithTrip | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -38,11 +43,11 @@ export const AdminReservations = () => {
       }
     }
 
-    const rows = data || []
+    const rows = (data as ReservationWithTrip[]) || []
     const patched =
       countsResult.error
         ? rows
-        : rows.map((row: any) => {
+        : rows.map((row: ReservationWithTrip) => {
             const tid = row.trip_id as string
             const reserved = countMap.get(tid) ?? 0
             if (!row.trips) return row
@@ -56,10 +61,8 @@ export const AdminReservations = () => {
   const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    void fetchReservations()
+    Promise.resolve().then(() => fetchReservations())
 
-    // Une insertion met à jour `reservations` puis le trigger met à jour `trips` → 2 événements.
-    // Un seul canal + debounce évite double rafraîchissement / impression de doublon.
     const scheduleRefetch = () => {
       if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current)
       realtimeDebounceRef.current = setTimeout(() => {
@@ -180,17 +183,17 @@ export const AdminReservations = () => {
 
   useEffect(() => {
     if (tripFilter !== 'all' && !tripOptions.some((t) => t.id === tripFilter)) {
-      setTripFilter('all')
+      Promise.resolve().then(() => setTripFilter('all'))
     }
   }, [tripOptions, tripFilter])
 
   useEffect(() => {
-    setCurrentPage(1)
+    Promise.resolve().then(() => setCurrentPage(1))
   }, [filter, tripFilter, searchTerm, pageSize])
 
   useEffect(() => {
     if (currentPage > totalPages) {
-      setCurrentPage(totalPages)
+      Promise.resolve().then(() => setCurrentPage(totalPages))
     }
   }, [currentPage, totalPages])
 
@@ -291,9 +294,11 @@ export const AdminReservations = () => {
                   </div>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between text-xs font-bold text-gray-500">
-                  <span>{res.persons} pers</span>
-                  <span>{new Date(res.created_at).toLocaleDateString('fr-FR')}</span>
+                <div className="mt-3 flex items-center justify-between text-[10px] font-bold text-gray-400">
+                  <span className="bg-gray-50 px-2 py-0.5 rounded-md">{res.persons} pers</span>
+                  <span className="flex items-center gap-1">
+                    {new Date(res.created_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
@@ -314,66 +319,58 @@ export const AdminReservations = () => {
           {/* Desktop: rich cards */}
           <div className="hidden md:grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6">
             {paginatedReservations.map(res => (
-              <div key={res.id} className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col group">
-                {/* Status Indicator Bar */}
-                <div className={`absolute top-0 left-0 right-0 h-1.5 transition-colors duration-500 ${
-                  res.status === 'confirmed' ? 'bg-green-500' : res.status === 'cancelled' ? 'bg-red-500' : 'bg-orange-500'
-                }`} />
-
-                <div className="flex justify-between items-start mb-4">
+              <div key={res.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all flex flex-col group">
+                <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="text-base font-black text-gray-900 tracking-tight truncate leading-tight">{res.full_name}</h3>
-                    <div className="flex items-center gap-1.5 text-primary font-black text-[9px] uppercase tracking-widest mt-1 truncate">
-                      <Calendar className="w-3 h-3" /> {res.trips?.title}
-                    </div>
+                    <h3 className="text-base font-black text-gray-900 truncate">{res.full_name}</h3>
+                    <p className="text-xs text-gray-500 font-semibold truncate mt-0.5">{res.trips?.title}</p>
                   </div>
-                  <div className={`px-2 py-0.5 rounded-lg border text-[8px] font-black uppercase shrink-0 transition-all ${getStatusStyle(res.status)}`}>
+                  <div className={`px-2 py-1 rounded-lg border text-[9px] font-black uppercase shrink-0 ${getStatusStyle(res.status)}`}>
                     {translateStatus(res.status)}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  <div className="p-3 bg-gray-50 rounded-xl">
-                    <p className="text-[8px] font-black text-gray-400 uppercase mb-0.5">Passagers</p>
-                    <p className="font-black text-sm text-gray-900">{res.persons} pers</p>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-xl overflow-hidden">
-                    <p className="text-[8px] font-black text-gray-400 uppercase mb-0.5">Contact</p>
-                    <a href={`tel:${res.phone}`} className="font-black text-[11px] text-primary flex items-center gap-1">
-                      <Phone className="w-3 h-3" /> {res.phone}
-                    </a>
-                  </div>
+                <div className="mt-4 flex items-center justify-between text-[10px] font-bold text-gray-400">
+                  <span className="bg-gray-50 px-2 py-0.5 rounded-md text-gray-600">{res.persons} pers</span>
+                  <span className="flex items-center gap-1">
+                    {new Date(res.created_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
 
-                <div className="mt-auto pt-4 border-t border-gray-50 flex gap-2">
-                  <button 
-                    onClick={() => updateReservationStatus(res.id, 'confirmed')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl font-black text-[10px] transition-all ${
-                      res.status === 'confirmed' 
-                      ? 'bg-green-500 text-white shadow-lg shadow-green-200' 
-                      : 'bg-green-50 text-green-600 hover:bg-green-500 hover:text-white'
-                    }`}
-                  >
-                    <CheckCircle className="w-3.5 h-3.5" /> {res.status === 'confirmed' ? 'Confirmé' : 'Confirmer'}
-                  </button>
-                  <button 
-                    onClick={() => updateReservationStatus(res.id, 'cancelled')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl font-black text-[10px] transition-all ${
-                      res.status === 'cancelled' 
-                      ? 'bg-red-500 text-white shadow-lg shadow-red-200' 
-                      : 'bg-red-50 text-red-600 hover:bg-red-500 hover:text-white'
-                    }`}
-                  >
-                    <XCircle className="w-3.5 h-3.5" /> {res.status === 'cancelled' ? 'Annulé' : 'Annuler'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setReservationToDelete(res)
-                    }}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl font-black text-[10px] transition-all bg-gray-100 text-gray-500 hover:bg-red-500 hover:text-white"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Supprimer
-                  </button>
+                <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-3">
+                  <a href={`tel:${res.phone}`} className="flex items-center gap-2 text-primary font-black text-sm hover:scale-[1.02] transition-transform w-fit">
+                    <Phone className="w-4 h-4" /> {res.phone}
+                  </a>
+                  
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => updateReservationStatus(res.id, 'confirmed')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all ${
+                        res.status === 'confirmed' 
+                        ? 'bg-green-500 text-white shadow-lg shadow-green-200' 
+                        : 'bg-green-50 text-green-600 hover:bg-green-500 hover:text-white'
+                      }`}
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" /> {res.status === 'confirmed' ? 'Confirmé' : 'Valider'}
+                    </button>
+                    <button 
+                      onClick={() => updateReservationStatus(res.id, 'cancelled')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all ${
+                        res.status === 'cancelled' 
+                        ? 'bg-red-500 text-white shadow-lg shadow-red-200' 
+                        : 'bg-red-50 text-red-600 hover:bg-red-500 hover:text-white'
+                      }`}
+                    >
+                      <XCircle className="w-3.5 h-3.5" /> {res.status === 'cancelled' ? 'Annulé' : 'Refuser'}
+                    </button>
+                    <button
+                      onClick={() => setReservationToDelete(res)}
+                      className="p-2.5 rounded-xl bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all border border-transparent hover:border-red-100"
+                      title="Supprimer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

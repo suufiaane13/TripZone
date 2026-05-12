@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Calendar, Clock, Users, MapPin, Check, Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowLeft, Clock, Users, Check, Loader2, X, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Helmet } from 'react-helmet-async'
 import { ReservationModal } from '../components/ReservationModal'
 import { useTrips } from '../hooks/useTrips'
@@ -11,8 +12,27 @@ export const TripDetails = () => {
   const { trips, loading, error } = useTrips()
   const { settings } = useSiteSettings()
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null)
 
   const trip = trips.find(t => t.id === id)
+
+  // Keyboard navigation for Lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedPhotoIndex === null || !trip) return
+      
+      if (e.key === 'ArrowRight') {
+        setSelectedPhotoIndex((prev) => (prev! + 1) % trip.images.length)
+      } else if (e.key === 'ArrowLeft') {
+        setSelectedPhotoIndex((prev) => (prev! - 1 + trip.images.length) % trip.images.length)
+      } else if (e.key === 'Escape') {
+        setSelectedPhotoIndex(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedPhotoIndex, trip])
 
   if (loading) return (
     <div className="min-h-[80vh] flex items-center justify-center">
@@ -37,15 +57,15 @@ export const TripDetails = () => {
         <meta name="description" content={trip.description?.substring(0, 160)} />
         <meta property="og:title" content={`${trip.title} | TripZone`} />
         <meta property="og:description" content={trip.description?.substring(0, 160)} />
-        <meta property="og:image" content={trip.image_url} />
+        <meta property="og:image" content={trip.images?.[0]} />
         <meta property="twitter:title" content={`${trip.title} | TripZone`} />
         <meta property="twitter:description" content={trip.description?.substring(0, 160)} />
-        <meta property="twitter:image" content={trip.image_url} />
+        <meta property="twitter:image" content={trip.images?.[0]} />
       </Helmet>
 
       {/* Hero Section */}
       <div className="relative h-[50vh] overflow-hidden">
-        <img src={trip.image_url} alt={trip.title} className="w-full h-full object-cover" />
+        <img src={trip.images?.[0] || 'https://via.placeholder.com/1200x800'} alt={trip.title} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         <div className="absolute bottom-12 left-0 right-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -64,23 +84,14 @@ export const TripDetails = () => {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-12 pb-20">
             {/* Quick Stats */}
-            <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 flex flex-wrap gap-8 justify-between">
-              <div className="flex items-center gap-4">
-                <div className="bg-primary/10 p-3 rounded-2xl">
-                  <Calendar className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Date</p>
-                  <p className="text-lg font-bold text-gray-900">{new Date(trip.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                </div>
-              </div>
+            <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 flex flex-wrap gap-8 justify-around">
               <div className="flex items-center gap-4">
                 <div className="bg-primary/10 p-3 rounded-2xl">
                   <Clock className="w-6 h-6 text-primary" />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Départ</p>
-                  <p className="text-lg font-bold text-gray-900">{trip.departure_time}</p>
+                  <p className="text-lg font-bold text-gray-900">{trip.departure_time.substring(0, 5)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -89,7 +100,7 @@ export const TripDetails = () => {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Places libres</p>
-                  <p className="text-lg font-bold text-gray-900">{trip.places_total - trip.places_reserved} pour passagers</p>
+                  <p className="text-lg font-bold text-gray-900">{trip.places_total - trip.places_reserved} places</p>
                 </div>
               </div>
             </div>
@@ -113,8 +124,37 @@ export const TripDetails = () => {
               </div>
             </div>
 
+            {/* Gallery */}
+            {trip.images && trip.images.length > 0 && (
+              <div className="mt-12">
+                <h2 className="text-2xl font-black mb-8 ml-4">Galerie photos</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
+                  {trip.images.map((url, idx) => (
+                    <motion.div 
+                      key={idx} 
+                      whileHover={{ scale: 1.02, y: -5 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setSelectedPhotoIndex(idx)}
+                      className="aspect-square rounded-[32px] overflow-hidden shadow-sm border border-gray-100 group cursor-pointer relative bg-gray-100"
+                    >
+                      <img 
+                        src={url} 
+                        alt={`Photo ${idx + 1}`} 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                        <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform scale-50 group-hover:scale-100">
+                          <Maximize2 className="w-10 h-10 text-white drop-shadow-2xl" />
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Timeline */}
-            <div>
+            <div className="mt-16">
               <h2 className="text-2xl font-black mb-10 ml-4">Programme du voyage</h2>
               <div className="space-y-0">
                 {trip.destinations?.sort((a, b) => a.order_index - b.order_index).map((dest, idx) => (
@@ -152,20 +192,9 @@ export const TripDetails = () => {
 
                 <div className="space-y-4 mb-8">
                   <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
-                    <span className="text-sm font-bold text-gray-500">Capacité bus</span>
-                    <span className="font-bold">{trip.places_total}</span>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
-                    <span className="text-sm font-bold text-gray-500">Passagers (réservations)</span>
-                    <span className="font-bold text-gray-900">{trip.places_reserved}</span>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-2xl flex items-center justify-between">
                     <span className="text-sm font-bold text-gray-500">Places libres</span>
                     <span className="font-bold text-green-600">{trip.places_total - trip.places_reserved}</span>
                   </div>
-                  <p className="text-[11px] text-gray-400 font-medium leading-snug px-1">
-                    Le total « passagers » additionne le champ « nombre de personnes » de chaque demande (ex. 2 réservations de 2 et 3 pers. = 5).
-                  </p>
                 </div>
 
                 <button 
@@ -176,10 +205,6 @@ export const TripDetails = () => {
                   {trip.places_total === trip.places_reserved ? 'Complet' : 'Réserver maintenant'}
                 </button>
                 
-                <div className="mt-6 flex items-center justify-center gap-2 text-xs font-bold text-gray-400">
-                  <MapPin className="w-3 h-3" />
-                  <span>Plusieurs points de ramassage</span>
-                </div>
               </div>
 
               <div className="mt-6 p-6 bg-primary rounded-[32px] text-white">
@@ -204,6 +229,84 @@ export const TripDetails = () => {
         onClose={() => setIsModalOpen(false)} 
         trip={trip} 
       />
+
+      {/* Lightbox / Photo Viewer */}
+      <AnimatePresence>
+        {selectedPhotoIndex !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex flex-col p-4 sm:p-10"
+          >
+            {/* Header / Actions */}
+            <div className="w-full flex justify-between items-center text-white mb-4 sm:mb-6">
+              <span className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] bg-white/10 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full">
+                {selectedPhotoIndex + 1} / {trip.images.length}
+              </span>
+              <button 
+                onClick={() => setSelectedPhotoIndex(null)}
+                className="w-10 h-10 sm:w-12 sm:h-12 bg-white/10 hover:bg-white/20 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all active:scale-90"
+              >
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            </div>
+
+            {/* Main Image Container - Stable box */}
+            <div className="flex-1 relative w-full flex items-center justify-center overflow-hidden py-2 sm:py-0">
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={selectedPhotoIndex}
+                  src={trip.images[selectedPhotoIndex]}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 1.05 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="max-w-full max-h-full object-contain rounded-xl sm:rounded-2xl shadow-2xl"
+                  alt={`Photo ${selectedPhotoIndex + 1}`}
+                />
+              </AnimatePresence>
+
+              {/* Navigation Arrows - Optimized for Mobile */}
+              {trip.images.length > 1 && (
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSelectedPhotoIndex((prev) => (prev! - 1 + trip.images.length) % trip.images.length); }}
+                    className="absolute left-0 sm:left-4 w-10 h-10 sm:w-14 sm:h-14 bg-black/20 hover:bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-all active:scale-90 z-20"
+                  >
+                    <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSelectedPhotoIndex((prev) => (prev! + 1) % trip.images.length); }}
+                    className="absolute right-0 sm:right-4 w-10 h-10 sm:w-14 sm:h-14 bg-black/20 hover:bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-all active:scale-90 z-20"
+                  >
+                    <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Thumbnails Strip - Adaptive sizes */}
+            <div className="mt-4 sm:mt-8 flex justify-center w-full">
+              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-4 max-w-full no-scrollbar px-4 items-center">
+                {trip.images.map((url, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedPhotoIndex(idx)}
+                    className={`relative w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl overflow-hidden shrink-0 transition-all duration-300 border-2 ${
+                      idx === selectedPhotoIndex 
+                      ? 'border-primary scale-110 shadow-[0_0_30px_rgba(27,67,50,0.5)] z-10' 
+                      : 'border-white/10 opacity-30 hover:opacity-100 hover:border-white/30'
+                    }`}
+                  >
+                    <img src={url} className="absolute inset-0 w-full h-full object-cover" alt={`Thumb ${idx + 1}`} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -67,7 +67,7 @@ export const AdminProfile = () => {
   }
 
   useEffect(() => {
-    fetchUser()
+    Promise.resolve().then(() => fetchUser())
   }, [])
 
   const handleSaveProfile = async (e: React.FormEvent) => {

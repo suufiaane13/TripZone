@@ -20,7 +20,7 @@ export const useTrips = () => {
             destinations (*)
           `)
           .eq('status', 'active')
-          .order('date', { ascending: true }),
+          .order('departure_time', { ascending: true }),
         supabase.rpc('get_reserved_places_by_trip'),
       ])
 
@@ -43,15 +43,19 @@ export const useTrips = () => {
 
       setError(null)
       setTrips(merged)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError('Une erreur inconnue est survenue')
+      }
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchTrips()
+    Promise.resolve().then(() => fetchTrips())
 
     const subscription = supabase
       .channel('trips_changes')

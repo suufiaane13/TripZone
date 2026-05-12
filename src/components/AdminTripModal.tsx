@@ -26,18 +26,26 @@ export const AdminTripModal = ({ isOpen, onClose, onSuccess, tripToEdit }: Admin
   ])
 
   useEffect(() => {
-    if (tripToEdit) {
-      setFormData({
-        title: tripToEdit.title, description: tripToEdit.description || '', price: tripToEdit.price,
-        date: tripToEdit.date, departure_time: tripToEdit.departure_time, image_url: tripToEdit.image_url || '',
-        places_total: tripToEdit.places_total
+    if (isOpen) {
+      Promise.resolve().then(() => {
+        if (tripToEdit) {
+          setFormData({
+            title: tripToEdit.title,
+            description: tripToEdit.description || '',
+            price: tripToEdit.price,
+            date: tripToEdit.date,
+            departure_time: tripToEdit.departure_time,
+            image_url: tripToEdit.images?.[0] || '',
+            places_total: tripToEdit.places_total
+          })
+          setDestinations(
+            tripToEdit.destinations?.map(d => ({ name: d.name, description: d.description || '' })) || [{ name: '', description: '' }]
+          )
+        } else {
+          setFormData({ title: '', description: '', price: 45, date: '', departure_time: '08:00', image_url: '', places_total: 20 })
+          setDestinations([{ name: '', description: '' }])
+        }
       })
-      if (tripToEdit.destinations && tripToEdit.destinations.length > 0) {
-        setDestinations(tripToEdit.destinations.map(d => ({ name: d.name, description: d.description || '' })))
-      }
-    } else {
-      setFormData({ title: '', description: '', price: 45, date: '', departure_time: '08:00', image_url: '', places_total: 20 })
-      setDestinations([{ name: '', description: '' }])
     }
   }, [tripToEdit, isOpen])
 
@@ -112,8 +120,8 @@ export const AdminTripModal = ({ isOpen, onClose, onSuccess, tripToEdit }: Admin
       setUploadProgress(100)
       
       setTimeout(() => setUploadProgress(0), 1500)
-    } catch (error: any) {
-      alert('Erreur d\'upload: ' + error.message)
+    } catch (error: unknown) {
+      alert('Erreur d\'upload: ' + (error instanceof Error ? error.message : 'Erreur inconnue'))
       setUploadProgress(0)
     } finally { 
       setUploading(false) 
@@ -145,7 +153,9 @@ export const AdminTripModal = ({ isOpen, onClose, onSuccess, tripToEdit }: Admin
         await supabase.from('destinations').insert(dests)
       }
       onSuccess(); onClose()
-    } catch (err: any) { alert(err.message) } finally { setLoading(false) }
+    } catch (err: unknown) { 
+      alert(err instanceof Error ? err.message : 'Erreur inconnue') 
+    } finally { setLoading(false) }
   }
 
   return (

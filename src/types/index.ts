@@ -3,12 +3,12 @@ export interface Trip {
   title: string;
   description: string;
   price: number;
-  date: string;
   departure_time: string;
   places_total: number;
   places_reserved: number;
-  image_url: string;
+  images: string[];
   status: 'active' | 'completed' | 'cancelled';
+  date: string;
   destinations?: Destination[];
 }
 

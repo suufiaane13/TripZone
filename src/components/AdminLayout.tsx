@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { 
   LayoutDashboard, Map, Users, Settings, ExternalLink, LogOut, Menu, X
@@ -20,9 +20,6 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     navigate('/')
   }
 
-  useEffect(() => {
-    setIsMenuOpen(false)
-  }, [location.pathname])
 
   const navItems = [
     { label: 'Accueil', path: '/admin/dashboard', icon: LayoutDashboard },
@@ -97,6 +94,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
                 <Link
                   key={item.path}
                   to={item.path}
+                  onClick={() => setIsMenuOpen(false)}
                   className="text-4xl font-black text-gray-900 tracking-tighter hover:text-primary transition-colors"
                 >
                   {item.label}

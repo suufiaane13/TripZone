@@ -6,12 +6,12 @@ CREATE TABLE IF NOT EXISTS trips (
     title TEXT NOT NULL,
     description TEXT,
     price INTEGER NOT NULL,
-    date DATE NOT NULL,
     departure_time TIME NOT NULL,
     places_total INTEGER NOT NULL DEFAULT 20,
     places_reserved INTEGER NOT NULL DEFAULT 0,
-    image_url TEXT,
+    images TEXT[] DEFAULT '{}',
     status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled')),
+    date DATE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

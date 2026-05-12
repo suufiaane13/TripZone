@@ -1,6 +1,7 @@
-import { motion } from 'framer-motion'
-import { Calendar, Users, MapPin } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Clock, Users, MapPin } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import type { Trip } from '../types'
 
 interface TripCardProps {
@@ -10,6 +11,18 @@ interface TripCardProps {
 
 export const TripCard = ({ trip, onBookClick }: TripCardProps) => {
   const navigate = useNavigate()
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const hasMultipleImages = trip.images && trip.images.length > 1
+
+  useEffect(() => {
+    if (!hasMultipleImages) return
+
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % trip.images.length)
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [hasMultipleImages, trip.images?.length])
 
   return (
     <motion.div 
@@ -22,25 +35,52 @@ export const TripCard = ({ trip, onBookClick }: TripCardProps) => {
     >
       {/* Image Section */}
       <div className="relative h-72 overflow-hidden shrink-0">
-        <img src={trip.image_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={trip.title} />
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={currentImageIndex}
+            src={trip.images?.[currentImageIndex] || 'https://via.placeholder.com/400x300'}
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            className="absolute inset-0 w-full h-full object-cover"
+            alt={trip.title}
+          />
+        </AnimatePresence>
+        
+        <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+
+        {/* Indicators */}
+        {hasMultipleImages && (
+          <div className="absolute bottom-6 right-6 flex gap-1 z-10">
+            {trip.images.map((_, idx) => (
+              <div 
+                key={idx}
+                className={`h-1 rounded-full transition-all duration-500 ${
+                  idx === currentImageIndex ? 'w-4 bg-white' : 'w-1 bg-white/40'
+                }`}
+              />
+            ))}
+          </div>
+        )}
         
         {/* Badge Prix */}
-        <div className="absolute top-6 right-6 bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl text-gray-900 font-black text-lg shadow-xl flex items-center gap-1">
+        <div className="absolute top-6 right-6 bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl text-gray-900 font-black text-lg shadow-xl flex items-center gap-1 z-10">
           {trip.price} <span className="text-[10px] text-gray-400">DH</span>
         </div>
 
         {/* Badge Places */}
-        <div className="absolute bottom-6 left-6 flex gap-2">
+        <div className="absolute bottom-6 left-6 flex gap-2 z-10">
           <div
             className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl text-white font-bold text-[10px] flex items-center gap-1.5 border border-white/10 uppercase tracking-widest"
-            title="Places restantes pour passagers (chaque réservation peut être pour plusieurs personnes)"
+            title="Places restantes pour passagers"
           >
             <Users className="w-3.5 h-3.5 text-primary" /> {trip.places_total - (trip.places_reserved || 0)} libres
           </div>
         </div>
 
         {trip.places_reserved >= trip.places_total && (
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center z-20">
             <span className="bg-red-500 text-white px-6 py-2 rounded-full font-black text-xs uppercase tracking-widest">Complet</span>
           </div>
         )}
@@ -57,7 +97,7 @@ export const TripCard = ({ trip, onBookClick }: TripCardProps) => {
         
         <div className="flex items-center gap-6 mb-8 mt-auto">
           <div className="flex items-center gap-2 text-gray-400 font-bold text-xs">
-            <Calendar className="w-4 h-4 text-primary/60" /> {new Date(trip.date).toLocaleDateString()}
+            <Clock className="w-4 h-4 text-primary/60" /> Départ à {trip.departure_time.substring(0, 5)}
           </div>
         </div>
 

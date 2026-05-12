@@ -25,12 +25,12 @@ export const getWhatsAppLink = (phone: string, message?: string) => {
   return `https://wa.me/${to}?text=${encodeURIComponent(message)}`
 }
 
-const mapRowToSettings = (row: any): SiteSettings => ({
-  instagram_url: row?.instagram_url || DEFAULT_SITE_SETTINGS.instagram_url,
-  whatsapp_number: row?.whatsapp_number || DEFAULT_SITE_SETTINGS.whatsapp_number,
-  contact_email: row?.contact_email || DEFAULT_SITE_SETTINGS.contact_email,
-  contact_phone: row?.contact_phone || DEFAULT_SITE_SETTINGS.contact_phone,
-  contact_city: row?.contact_city || DEFAULT_SITE_SETTINGS.contact_city,
+const mapRowToSettings = (row: Record<string, unknown> | null): SiteSettings => ({
+  instagram_url: (row?.instagram_url as string) || DEFAULT_SITE_SETTINGS.instagram_url,
+  whatsapp_number: (row?.whatsapp_number as string) || DEFAULT_SITE_SETTINGS.whatsapp_number,
+  contact_email: (row?.contact_email as string) || DEFAULT_SITE_SETTINGS.contact_email,
+  contact_phone: (row?.contact_phone as string) || DEFAULT_SITE_SETTINGS.contact_phone,
+  contact_city: (row?.contact_city as string) || DEFAULT_SITE_SETTINGS.contact_city,
 })
 
 export const fetchSiteSettings = async (): Promise<SiteSettings> => {
@@ -80,15 +80,15 @@ export const useSiteSettings = () => {
       const fetched = await fetchSiteSettings()
       setSettings(fetched)
       setError(null)
-    } catch (err: any) {
-      setError(err.message || 'Impossible de charger les paramètres du site.')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Impossible de charger les paramètres du site.')
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    refresh()
+    Promise.resolve().then(() => refresh())
   }, [refresh])
 
   return { settings, loading, error, refresh, setSettings }

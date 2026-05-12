@@ -21,12 +21,38 @@ export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProp
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
-    persons: 1
+    persons: 1,
+    honeypot: '' // Anti-spam field
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (submitLock.current || status === 'submitting') return
+
+    // 1. Honeypot check (Bots)
+    if (formData.honeypot) {
+      console.warn('Bot detected via honeypot')
+      onClose()
+      return
+    }
+
+    // 2. LocalStorage Lock (Duplicate prevention)
+    const lockKey = `tz_lock_${trip.id}`
+    const lastRes = localStorage.getItem(lockKey)
+    if (lastRes && Date.now() - parseInt(lastRes) < 1000 * 60 * 10) { // 10 minutes lock
+      setErrorMsg('Vous avez déjà envoyé une demande pour ce trajet. Veuillez patienter quelques minutes.')
+      setStatus('error')
+      return
+    }
+
+    // 3. Validation numéro marocain
+    const phoneRegex = /^(?:0|\+212|212)[567]\d{8}$/
+    if (!phoneRegex.test(formData.phone.replace(/\s/g, ''))) {
+      setErrorMsg('Veuillez entrer un numéro de téléphone marocain valide (ex: 0612345678).')
+      setStatus('error')
+      return
+    }
+
     submitLock.current = true
     setStatus('submitting')
     setErrorMsg(null)
@@ -41,6 +67,10 @@ export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProp
 
       if (error) throw error
       if (!newId) throw new Error('Réponse invalide du serveur.')
+      
+      // Set lock after success
+      localStorage.setItem(lockKey, Date.now().toString())
+      
       setResId(newId as string)
       setStatus('success')
 
@@ -71,8 +101,8 @@ export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProp
             console.info('[TripZone] Telegram OK', data)
           }
         })
-    } catch (err: any) {
-      const raw = err.message || 'Une erreur est survenue lors de la réservation.'
+    } catch (err: unknown) {
+      const raw = err instanceof Error ? err.message : 'Une erreur est survenue lors de la réservation.'
       setErrorMsg(formatReservationDuplicateError(raw))
       setStatus('error')
     } finally {
@@ -126,7 +156,9 @@ export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProp
                     <p className="font-black text-gray-900 mb-2">{trip.title}</p>
                     <p className="text-gray-600"><span className="font-bold text-gray-900">{formData.fullName}</span> · {formData.persons} pers.</p>
                     <p className="text-gray-500 mt-1">
-                      {new Date(trip.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                      {trip.date 
+                        ? new Date(trip.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+                        : 'Date à confirmer'}
                     </p>
                   </div>
                   
@@ -151,6 +183,17 @@ export const ReservationModal = ({ isOpen, onClose, trip }: ReservationModalProp
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Honeypot field - Invisible to humans */}
+                  <div className="opacity-0 absolute h-0 w-0 -z-50 overflow-hidden" aria-hidden="true">
+                    <input 
+                      type="text" 
+                      autoComplete="off" 
+                      value={formData.honeypot} 
+                      onChange={e => setFormData({...formData, honeypot: e.target.value})} 
+                      tabIndex={-1}
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-gray-700 ml-1">Nom Complet</label>
                     <div className="relative">

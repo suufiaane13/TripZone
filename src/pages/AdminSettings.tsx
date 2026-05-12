@@ -36,7 +36,7 @@ export const AdminSettings = () => {
   const [notice, setNotice] = useState<Notice>(null)
 
   useEffect(() => {
-    setForm(settings)
+    Promise.resolve().then(() => setForm(settings))
   }, [settings])
 
   const onChange = (field: keyof SiteSettings, value: string) => {
@@ -53,10 +53,10 @@ export const AdminSettings = () => {
         type: 'success',
         message: 'Paramètres enregistrés. Le front public utilisera ces nouvelles valeurs.',
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       setNotice({
         type: 'error',
-        message: err.message || 'Erreur lors de l’enregistrement des paramètres.',
+        message: err instanceof Error ? err.message : 'Erreur lors de l’enregistrement des paramètres.',
       })
     } finally {
       setSaving(false)

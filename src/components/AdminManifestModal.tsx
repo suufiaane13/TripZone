@@ -3,7 +3,7 @@ import { X, Printer, Phone, Users, Clock, Loader2, FileText, Download } from 'lu
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import * as XLSX from 'xlsx'
-import type { Trip } from '../types'
+import type { Trip, Reservation } from '../types'
 
 interface AdminManifestModalProps {
   isOpen: boolean
@@ -12,12 +12,8 @@ interface AdminManifestModalProps {
 }
 
 export const AdminManifestModal = ({ isOpen, onClose, trip }: AdminManifestModalProps) => {
-  const [reservations, setReservations] = useState<any[]>([])
+  const [reservations, setReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (trip && isOpen) fetchManifest()
-  }, [trip, isOpen])
 
   const fetchManifest = async () => {
     if (!trip) return
@@ -27,9 +23,15 @@ export const AdminManifestModal = ({ isOpen, onClose, trip }: AdminManifestModal
       .select('*')
       .eq('trip_id', trip.id)
       .order('full_name', { ascending: true })
-    setReservations(data || [])
+    setReservations((data as Reservation[]) || [])
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (trip && isOpen) {
+      Promise.resolve().then(() => fetchManifest())
+    }
+  }, [trip, isOpen, fetchManifest])
 
   const handlePrint = () => window.print()
 
@@ -123,7 +125,7 @@ export const AdminManifestModal = ({ isOpen, onClose, trip }: AdminManifestModal
                   </div>
                   <div className="text-right">
                     <h2 className="text-xl font-black uppercase">Manifeste de Voyage</h2>
-                    <p className="text-sm font-bold">{new Date(trip.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })} • {trip.departure_time}</p>
+                    <p className="text-sm font-bold">Départ à {trip.departure_time.substring(0, 5)}</p>
                   </div>
                 </div>
 

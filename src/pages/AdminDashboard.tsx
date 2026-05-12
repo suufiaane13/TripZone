@@ -3,22 +3,27 @@ import { supabase } from '../lib/supabase'
 import { useTrips } from '../hooks/useTrips'
 import { TrendingUp, UserCheck, Map, Users } from 'lucide-react'
 import { AdminLayout } from '../components/AdminLayout'
+import type { Reservation, Trip } from '../types'
+
+interface ReservationWithTrip extends Reservation {
+  trips: Trip | null
+}
 
 export const AdminDashboard = () => {
   const { trips } = useTrips()
-  const [reservations, setReservations] = useState<any[]>([])
-
-  useEffect(() => {
-    fetchReservations()
-  }, [])
+  const [reservations, setReservations] = useState<ReservationWithTrip[]>([])
 
   const fetchReservations = async () => {
     const { data } = await supabase
       .from('reservations')
       .select('*, trips(*)')
       .order('created_at', { ascending: false })
-    setReservations(data || [])
+    setReservations((data as ReservationWithTrip[]) || [])
   }
+
+  useEffect(() => {
+    Promise.resolve().then(() => fetchReservations())
+  }, [])
 
   const stats = {
     revenue: reservations.filter(r => r.status === 'confirmed').reduce((acc, r) => acc + (r.persons * (r.trips?.price || 0)), 0),

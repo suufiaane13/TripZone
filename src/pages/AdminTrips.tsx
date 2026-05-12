@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTrips } from '../hooks/useTrips'
 import { 
-  Plus, Trash2, Calendar, Tag, Loader2, Edit, FileText, Map, Users
+  Plus, Trash2, Clock, Tag, Loader2, Edit, FileText, Map, Users
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { AdminLayout } from '../components/AdminLayout'
@@ -25,7 +25,7 @@ export const AdminTrips = () => {
 
   useEffect(() => {
     if (currentPage > totalPages) {
-      setCurrentPage(totalPages)
+      Promise.resolve().then(() => setCurrentPage(totalPages))
     }
   }, [currentPage, totalPages])
 
@@ -47,8 +47,8 @@ export const AdminTrips = () => {
       if (error) throw error
       setIsConfirmOpen(false)
       refetch()
-    } catch (err: any) {
-      alert(err.message)
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Erreur inconnue')
     } finally {
       setIsDeleting(false)
     }
@@ -88,7 +88,7 @@ export const AdminTrips = () => {
             {paginatedTrips.map(trip => (
               <div key={trip.id} className={`group bg-white p-4 lg:p-6 rounded-[32px] border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center gap-6 lg:gap-10 transition-all hover:shadow-xl ${trip.status === 'completed' ? 'opacity-60 grayscale' : ''}`}>
                 <div className="w-full sm:w-32 h-32 rounded-[24px] overflow-hidden shrink-0 relative">
-                  <img src={trip.image_url} className="w-full h-full object-cover" />
+                  <img src={trip.images?.[0] || 'https://via.placeholder.com/400x300'} className="w-full h-full object-cover" />
                 </div>
                 
                 <div className="flex-1 w-full text-center sm:text-left">
@@ -100,7 +100,7 @@ export const AdminTrips = () => {
                   </div>
                   <div className="flex flex-wrap justify-center sm:justify-start gap-4">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400">
-                      <Calendar className="w-4 h-4 text-primary" /> {new Date(trip.date).toLocaleDateString()}
+                      <Clock className="w-4 h-4 text-primary" /> {trip.departure_time.substring(0, 5)}
                     </div>
                     <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400">
                       <Tag className="w-4 h-4 text-primary" /> {trip.price} DH
