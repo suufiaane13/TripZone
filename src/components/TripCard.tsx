@@ -35,14 +35,19 @@ export const TripCard = ({ trip, onBookClick }: TripCardProps) => {
     >
       {/* Image Section */}
       <div className="relative h-72 overflow-hidden shrink-0">
-        <AnimatePresence mode="wait">
+        <AnimatePresence initial={false}>
           <motion.img
             key={currentImageIndex}
             src={trip.images?.[currentImageIndex] || 'https://via.placeholder.com/400x300'}
-            initial={{ opacity: 0, scale: 1.1 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.8 }}
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 100, 
+              damping: 20,
+              opacity: { duration: 0.5 }
+            }}
             className="absolute inset-0 w-full h-full object-cover"
             alt={trip.title}
           />
@@ -95,9 +100,12 @@ export const TripCard = ({ trip, onBookClick }: TripCardProps) => {
           {trip.title}
         </h3>
         
-        <div className="flex items-center gap-6 mb-8 mt-auto">
-          <div className="flex items-center gap-2 text-gray-400 font-bold text-xs">
-            <Clock className="w-4 h-4 text-primary/60" /> Départ à {trip.departure_time.substring(0, 5)}
+        <div className="flex items-center flex-wrap gap-x-6 gap-y-2 mb-8 mt-auto">
+          <div className="flex items-center gap-2 text-gray-400 font-bold text-[10px] uppercase tracking-wider">
+            <Clock className="w-3.5 h-3.5 text-primary/60" /> {trip.departure_time.substring(0, 5)}
+          </div>
+          <div className="flex items-center gap-2 text-gray-400 font-bold text-[10px] uppercase tracking-wider">
+            <Users className="w-3.5 h-3.5 text-primary/60" /> {trip.places_total - (trip.places_reserved || 0)} places
           </div>
         </div>
 

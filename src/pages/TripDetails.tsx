@@ -53,14 +53,22 @@ export const TripDetails = () => {
   return (
     <div className="bg-gray-50 min-h-screen pb-24 lg:pb-40">
       <Helmet>
-        <title>{trip.title} | TripZone</title>
-        <meta name="description" content={trip.description?.substring(0, 160)} />
-        <meta property="og:title" content={`${trip.title} | TripZone`} />
+        <title>{`${trip.title} - ${trip.price} DH | TripZone`}</title>
+        <meta name="description" content={`${trip.title} : ${trip.description?.substring(0, 150)}... Réservez votre place pour seulement ${trip.price} DH.`} />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={window.location.href} />
+        <meta property="og:title" content={`${trip.title} - ${trip.price} DH | TripZone Oujda`} />
         <meta property="og:description" content={trip.description?.substring(0, 160)} />
-        <meta property="og:image" content={trip.images?.[0]} />
-        <meta property="twitter:title" content={`${trip.title} | TripZone`} />
-        <meta property="twitter:description" content={trip.description?.substring(0, 160)} />
-        <meta property="twitter:image" content={trip.images?.[0]} />
+        <meta property="og:image" content={trip.images?.[0] || '/og-default.jpg'} />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={window.location.href} />
+        <meta name="twitter:title" content={`${trip.title} - ${trip.price} DH | TripZone`} />
+        <meta name="twitter:description" content={trip.description?.substring(0, 160)} />
+        <meta name="twitter:image" content={trip.images?.[0] || '/og-default.jpg'} />
       </Helmet>
 
       {/* Hero Section */}
@@ -84,23 +92,22 @@ export const TripDetails = () => {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-12 pb-20">
             {/* Quick Stats */}
-            <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 flex flex-wrap gap-8 justify-around">
-              <div className="flex items-center gap-4">
-                <div className="bg-primary/10 p-3 rounded-2xl">
-                  <Clock className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Départ</p>
-                  <p className="text-lg font-bold text-gray-900">{trip.departure_time.substring(0, 5)}</p>
+            <div className="bg-white rounded-[32px] p-6 sm:p-8 shadow-sm border border-gray-100 flex items-center justify-around gap-4">
+              <div className="flex items-center gap-3">
+                <Clock className="w-5 h-5 text-primary" />
+                <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Départ</span>
+                  <span className="text-sm sm:text-lg font-black text-gray-900">{trip.departure_time.substring(0, 5)}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="bg-primary/10 p-3 rounded-2xl">
-                  <Users className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Places libres</p>
-                  <p className="text-lg font-bold text-gray-900">{trip.places_total - trip.places_reserved} places</p>
+              
+              <div className="w-px h-8 bg-gray-100" /> {/* Séparateur */}
+
+              <div className="flex items-center gap-3">
+                <Users className="w-5 h-5 text-primary" />
+                <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Libres</span>
+                  <span className="text-sm sm:text-lg font-black text-gray-900">{trip.places_total - trip.places_reserved} places</span>
                 </div>
               </div>
             </div>
