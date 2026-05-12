@@ -10,7 +10,7 @@ export const MOCK_TRIPS: Trip[] = [
     departure_time: '08:00',
     places_total: 20,
     places_reserved: 12,
-    image_url: 'https://images.unsplash.com/photo-1539635278303-d4002c07dee3?auto=format&fit=crop&q=80&w=1000',
+    images: ['https://images.unsplash.com/photo-1539635278303-d4002c07dee3?auto=format&fit=crop&q=80&w=1000'],
     status: 'active',
     destinations: [
       {id: 'd1', name: 'Départ Oujda', order_index: 0, trip_id: '1', description: 'Rassemblement à la place de la gare.'},
@@ -28,7 +28,7 @@ export const MOCK_TRIPS: Trip[] = [
     departure_time: '07:30',
     places_total: 20,
     places_reserved: 20,
-    image_url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=1000',
+    images: ['https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=1000'],
     status: 'active',
     destinations: [
       {id: 'd5', name: 'Oujda', order_index: 0, trip_id: '2', description: 'Départ matinal.'},
@@ -45,7 +45,7 @@ export const MOCK_TRIPS: Trip[] = [
     departure_time: '08:30',
     places_total: 20,
     places_reserved: 5,
-    image_url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1000',
+    images: ['https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1000'],
     status: 'active',
     destinations: [
       {id: 'd8', name: 'Zegzel', order_index: 0, trip_id: '3', description: 'Traversée de la vallée.'},
